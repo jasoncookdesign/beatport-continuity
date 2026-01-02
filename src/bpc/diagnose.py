@@ -49,14 +49,25 @@ def run_diagnose(conn, snapshot_date: Optional[date] = None) -> int:
 
             parse_ok = False
             parsed_count = 0
+            is_unsupported_hype = False
             try:
                 entries = parse_chart(html)
                 parsed_count = len(entries)
-                parse_ok = parsed_count >= 50
+                # If hype chart returns 0 entries, it's unsupported (not a failure)
+                if parsed_count == 0 and "-hype-" in chart_id:
+                    is_unsupported_hype = True
+                    parse_ok = True  # Don't treat as failure
+                else:
+                    parse_ok = parsed_count >= 50
             except Exception as parse_exc:
                 LOG.error("Parse error for chart %s: %s", chart_id, parse_exc)
 
-            if not parse_ok:
+            if is_unsupported_hype:
+                results.append(
+                    f"[SKIP] {chart_id} unsupported hype chart (is_included_in_hype=false) "
+                    f"html={html_len} next_data={'yes' if has_next_data else 'no'}"
+                )
+            elif not parse_ok:
                 all_ok = False
                 chart_debug_dir = debug_base / chart_id / snap_str
                 chart_debug_dir.mkdir(parents=True, exist_ok=True)

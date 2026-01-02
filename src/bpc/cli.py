@@ -83,7 +83,7 @@ def handle_report(args: argparse.Namespace) -> None:
 
 
 def handle_run_all(args: argparse.Namespace) -> None:
-    LOG.info("Running full pipeline (placeholder)")
+    LOG.info("Running full pipeline")
     handlers: Sequence[Callable[[argparse.Namespace], None]] = (
         handle_init_db,
         handle_ingest,

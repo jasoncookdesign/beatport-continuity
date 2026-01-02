@@ -201,6 +201,8 @@ def _fetch_rows_for_chart(conn, chart_id: str, as_of_week: str) -> List[Dict[str
 def run_report(conn, snapshot_date: Optional[date] = None) -> str:
     paths = load_paths()
     paths.docs.mkdir(parents=True, exist_ok=True)
+    charts_dir = paths.docs / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
 
     chart_weeks = _resolve_target_weeks(conn, snapshot_date)
     if not chart_weeks:
@@ -222,19 +224,36 @@ def run_report(conn, snapshot_date: Optional[date] = None) -> str:
             }
         )
 
+    generated_at = datetime.utcnow().isoformat(timespec="seconds")
     env = Environment(
         loader=FileSystemLoader(str(paths.templates)),
         autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    tmpl = env.get_template("report.html.j2")
-    rendered = tmpl.render(
-        generated_at=datetime.utcnow().isoformat(timespec="seconds"),
-        charts=charts,
+    index_tmpl = env.get_template("index.html.j2")
+    chart_tmpl = env.get_template("chart.html.j2")
+
+    charts_for_index: List[Dict[str, object]] = []
+    for chart in charts:
+        page_href = f"charts/{chart['chart_id']}.html"
+        chart_for_index = {**chart, "top_rows": chart["rows"][:5], "page_href": page_href}
+        charts_for_index.append(chart_for_index)
+
+        rendered_chart = chart_tmpl.render(
+            generated_at=generated_at,
+            chart=chart,
+        )
+        chart_path = charts_dir / f"{chart['chart_id']}.html"
+        chart_path.write_text(rendered_chart, encoding="utf-8")
+        LOG.info("Chart page written to %s", chart_path)
+
+    rendered_index = index_tmpl.render(
+        generated_at=generated_at,
+        charts=charts_for_index,
     )
 
     output_path = paths.docs / "index.html"
-    output_path.write_text(rendered, encoding="utf-8")
+    output_path.write_text(rendered_index, encoding="utf-8")
     LOG.info("Report written to %s", output_path)
     return str(output_path)
