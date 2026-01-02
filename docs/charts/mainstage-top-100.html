@@ -22,7 +22,7 @@
     h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
     h2 { margin: 0 0 0.5rem 0; }
     .muted { color: var(--muted); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: hidden; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
     th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -50,6 +50,72 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+  /* Tooltip header wrapper */
+.tooltip-header{
+  position: relative;
+  cursor: help;
+  user-select: none;
+  overflow: visible !important; /* ensure tooltip isn't clipped by cell */
+}
+
+/* Tooltip bubble */
+.tooltip{
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  /* Visuals */
+  background: rgba(23, 27, 35, 0.98);
+  border: 1px solid rgba(84, 193, 255, 0.6);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+  /* Critical: stop inheriting TH typography */
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  line-height: 1.35;
+
+  /* Readability + wrapping */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+
+  /* Width */
+  width: max-content;
+  max-width: min(420px, 90vw);
+
+  /* Don’t steal hover; keeps hover stable */
+  pointer-events: none;
+}
+
+/* Show on hover (CSS-only) */
+.tooltip-header:hover .tooltip{
+  display: block;
+}
+
+/* Arrow */
+.tooltip::after{
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(84, 193, 255, 0.6);
+}
+
+/* Optional: soften hover highlight so it doesn't fight the tooltip */
+.tooltip-header:hover{
+  background: rgba(255,255,255,0.04);
+}
   </style></head>
 <body>
   <a class="back-link" href="../index.html">← Back to overview</a>
@@ -57,27 +123,27 @@
     <div class="card-header">
       <div>
         <h1>Mainstage Top 100</h1>
-        <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+        <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
       </div>
       <div class="badge">Top 100 tracks</div>
     </div>
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Score</th>
-          <th>Type</th>
-          <th>Cur</th>
-          <th>WoW</th>
-          <th>Weeks</th>
-          <th>Streak</th>
-          <th>Re</th>
-          <th>Best</th>
-          <th>Avg</th>
-          <th>Track</th>
-          <th>Mix</th>
-          <th>Artists</th>
-          <th>Remixers</th>
+          <th class="tooltip-header" data-tooltip="Rank in this table\nPosition after sorting tracks by Durability Score for this chart and week.">#</th>
+          <th class="tooltip-header" data-tooltip="Durability score\nComposite score that emphasizes how long and how consistently a track has appeared on this chart.\n\nBuilt from:\n• weeks present\n• stability (low volatility)\n• momentum (secondary)\n• re-entries\n• chart context\n\nHigher score = more durable over time.\nNot a popularity or quality judgment.">Score</th>
+          <th class="tooltip-header" data-tooltip="Durability pattern\nQualitative classification based on observed behavior:\n\n• Anchor — long-lasting, stable presence\n• Climber — short history, improving position\n• Fader — long presence, currently declining\n• Spike — brief, volatile peak\n\nDerived from raw metrics; no single metric decides this.">Type</th>
+          <th class="tooltip-header" data-tooltip="Current rank\nTrack's most recent chart position for this week.\nLower numbers are better.\n\nBlank means the track is not present this week.">Cur</th>
+          <th class="tooltip-header" data-tooltip="Week-over-week movement\nChange in rank compared to the previous week.\n\n• Positive = moved up\n• Negative = moved down\n• Zero = unchanged\n\nSmaller movements matter more than large one-week jumps.">WoW</th>
+          <th class="tooltip-header" data-tooltip="Weeks on chart\nTotal number of weeks this track has appeared on this chart.\n\nIncludes non-consecutive appearances.\nThis is the strongest durability signal.">Weeks</th>
+          <th class="tooltip-header" data-tooltip="Current / longest streak\nLeft number: consecutive weeks currently on chart\nRight number: longest uninterrupted run\n\nBreaks indicate exits and re-entries.">Streak</th>
+          <th class="tooltip-header" data-tooltip="Re-entries\nNumber of times the track exited and later re-entered the chart.\n\nRe-entries often indicate rediscovery or long-term DJ utility.">Re</th>
+          <th class="tooltip-header" data-tooltip="Peak rank\nHighest (best) chart position the track has ever reached.\n\nUsed for context only — peak alone does not imply durability.">Best</th>
+          <th class="tooltip-header" data-tooltip="Average rank\nAverage chart position across all appearances.\n\nRepresents where the track typically lives, not just its peak.">Avg</th>
+          <th class="tooltip-header" data-tooltip="Track title\nCanonical track name as listed on Beatport.\n\nLinks to the Beatport track page.">Track</th>
+          <th class="tooltip-header" data-tooltip="Mix / version\nSpecific mix or version of the track\n(e.g. Extended Mix, Original Mix).\n\nSeparated to avoid duplication in the title.">Mix</th>
+          <th class="tooltip-header" data-tooltip="Primary artists\nMain credited artists for the track.">Artists</th>
+          <th class="tooltip-header" data-tooltip="Remix artists\nArtists credited for remixing this version, if any.\n\nBlank means the track is not a remix.">Remixers</th>
         </tr>
       </thead>
       <tbody>
@@ -89,9 +155,9 @@
           </td>
           <td class="num">1</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">1</td>
           <td class="num">1.0</td>
@@ -108,9 +174,9 @@
           </td>
           <td class="num">2</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">2</td>
           <td class="num">2.0</td>
@@ -127,9 +193,9 @@
           </td>
           <td class="num">3</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">3</td>
           <td class="num">3.0</td>
@@ -146,9 +212,9 @@
           </td>
           <td class="num">4</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">4</td>
           <td class="num">4.0</td>
@@ -165,9 +231,9 @@
           </td>
           <td class="num">5</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">5</td>
           <td class="num">5.0</td>
@@ -184,9 +250,9 @@
           </td>
           <td class="num">6</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">6</td>
           <td class="num">6.0</td>
@@ -203,9 +269,9 @@
           </td>
           <td class="num">7</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">7</td>
           <td class="num">7.0</td>
@@ -222,9 +288,9 @@
           </td>
           <td class="num">8</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">8</td>
           <td class="num">8.0</td>
@@ -241,9 +307,9 @@
           </td>
           <td class="num">9</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">9</td>
           <td class="num">9.0</td>
@@ -260,9 +326,9 @@
           </td>
           <td class="num">10</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">10</td>
           <td class="num">10.0</td>
@@ -279,9 +345,9 @@
           </td>
           <td class="num">11</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">11</td>
           <td class="num">11.0</td>
@@ -298,9 +364,9 @@
           </td>
           <td class="num">12</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">12</td>
           <td class="num">12.0</td>
@@ -317,9 +383,9 @@
           </td>
           <td class="num">13</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">13</td>
           <td class="num">13.0</td>
@@ -336,9 +402,9 @@
           </td>
           <td class="num">14</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">14</td>
           <td class="num">14.0</td>
@@ -355,9 +421,9 @@
           </td>
           <td class="num">15</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">15</td>
           <td class="num">15.0</td>
@@ -374,9 +440,9 @@
           </td>
           <td class="num">16</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">16</td>
           <td class="num">16.0</td>
@@ -393,9 +459,9 @@
           </td>
           <td class="num">17</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">17</td>
           <td class="num">17.0</td>
@@ -412,9 +478,9 @@
           </td>
           <td class="num">18</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">18</td>
           <td class="num">18.0</td>
@@ -431,9 +497,9 @@
           </td>
           <td class="num">19</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">19</td>
           <td class="num">19.0</td>
@@ -450,9 +516,9 @@
           </td>
           <td class="num">20</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">20</td>
           <td class="num">20.0</td>
@@ -469,9 +535,9 @@
           </td>
           <td class="num">21</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">21</td>
           <td class="num">21.0</td>
@@ -488,9 +554,9 @@
           </td>
           <td class="num">22</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">22</td>
           <td class="num">22.0</td>
@@ -507,9 +573,9 @@
           </td>
           <td class="num">23</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">23</td>
           <td class="num">23.0</td>
@@ -526,9 +592,9 @@
           </td>
           <td class="num">24</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">24</td>
           <td class="num">24.0</td>
@@ -545,9 +611,9 @@
           </td>
           <td class="num">25</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">25</td>
           <td class="num">25.0</td>
@@ -564,9 +630,9 @@
           </td>
           <td class="num">26</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">26</td>
           <td class="num">26.0</td>
@@ -583,9 +649,9 @@
           </td>
           <td class="num">27</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">27</td>
           <td class="num">27.0</td>
@@ -602,9 +668,9 @@
           </td>
           <td class="num">28</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">28</td>
           <td class="num">28.0</td>
@@ -621,9 +687,9 @@
           </td>
           <td class="num">29</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">29</td>
           <td class="num">29.0</td>
@@ -640,9 +706,9 @@
           </td>
           <td class="num">30</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">30</td>
           <td class="num">30.0</td>
@@ -659,9 +725,9 @@
           </td>
           <td class="num">31</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">31</td>
           <td class="num">31.0</td>
@@ -678,9 +744,9 @@
           </td>
           <td class="num">32</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">32</td>
           <td class="num">32.0</td>
@@ -697,9 +763,9 @@
           </td>
           <td class="num">33</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">33</td>
           <td class="num">33.0</td>
@@ -716,9 +782,9 @@
           </td>
           <td class="num">34</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">34</td>
           <td class="num">34.0</td>
@@ -735,9 +801,9 @@
           </td>
           <td class="num">35</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">35</td>
           <td class="num">35.0</td>
@@ -754,9 +820,9 @@
           </td>
           <td class="num">36</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">36</td>
           <td class="num">36.0</td>
@@ -773,9 +839,9 @@
           </td>
           <td class="num">37</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">37</td>
           <td class="num">37.0</td>
@@ -792,9 +858,9 @@
           </td>
           <td class="num">38</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">38</td>
           <td class="num">38.0</td>
@@ -811,9 +877,9 @@
           </td>
           <td class="num">39</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">39</td>
           <td class="num">39.0</td>
@@ -830,9 +896,9 @@
           </td>
           <td class="num">40</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">40</td>
           <td class="num">40.0</td>
@@ -849,9 +915,9 @@
           </td>
           <td class="num">41</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">41</td>
           <td class="num">41.0</td>
@@ -868,9 +934,9 @@
           </td>
           <td class="num">42</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">42</td>
           <td class="num">42.0</td>
@@ -887,9 +953,9 @@
           </td>
           <td class="num">43</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">43</td>
           <td class="num">43.0</td>
@@ -906,9 +972,9 @@
           </td>
           <td class="num">44</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">44</td>
           <td class="num">44.0</td>
@@ -925,9 +991,9 @@
           </td>
           <td class="num">45</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">45</td>
           <td class="num">45.0</td>
@@ -944,9 +1010,9 @@
           </td>
           <td class="num">46</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">46</td>
           <td class="num">46.0</td>
@@ -963,9 +1029,9 @@
           </td>
           <td class="num">47</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">47</td>
           <td class="num">47.0</td>
@@ -982,9 +1048,9 @@
           </td>
           <td class="num">48</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">48</td>
           <td class="num">48.0</td>
@@ -1001,9 +1067,9 @@
           </td>
           <td class="num">49</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">49</td>
           <td class="num">49.0</td>
@@ -1020,9 +1086,9 @@
           </td>
           <td class="num">50</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">50</td>
           <td class="num">50.0</td>
@@ -1039,9 +1105,9 @@
           </td>
           <td class="num">51</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">51</td>
           <td class="num">51.0</td>
@@ -1058,9 +1124,9 @@
           </td>
           <td class="num">52</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">52</td>
           <td class="num">52.0</td>
@@ -1077,9 +1143,9 @@
           </td>
           <td class="num">53</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">53</td>
           <td class="num">53.0</td>
@@ -1096,9 +1162,9 @@
           </td>
           <td class="num">54</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">54</td>
           <td class="num">54.0</td>
@@ -1115,9 +1181,9 @@
           </td>
           <td class="num">55</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">55</td>
           <td class="num">55.0</td>
@@ -1134,9 +1200,9 @@
           </td>
           <td class="num">56</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">56</td>
           <td class="num">56.0</td>
@@ -1153,9 +1219,9 @@
           </td>
           <td class="num">57</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">57</td>
           <td class="num">57.0</td>
@@ -1172,9 +1238,9 @@
           </td>
           <td class="num">58</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">58</td>
           <td class="num">58.0</td>
@@ -1191,9 +1257,9 @@
           </td>
           <td class="num">59</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">59</td>
           <td class="num">59.0</td>
@@ -1210,9 +1276,9 @@
           </td>
           <td class="num">60</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">60</td>
           <td class="num">60.0</td>
@@ -1229,9 +1295,9 @@
           </td>
           <td class="num">61</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">61</td>
           <td class="num">61.0</td>
@@ -1248,9 +1314,9 @@
           </td>
           <td class="num">62</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">62</td>
           <td class="num">62.0</td>
@@ -1267,9 +1333,9 @@
           </td>
           <td class="num">63</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">63</td>
           <td class="num">63.0</td>
@@ -1286,9 +1352,9 @@
           </td>
           <td class="num">64</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">64</td>
           <td class="num">64.0</td>
@@ -1305,9 +1371,9 @@
           </td>
           <td class="num">65</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">65</td>
           <td class="num">65.0</td>
@@ -1324,9 +1390,9 @@
           </td>
           <td class="num">66</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">66</td>
           <td class="num">66.0</td>
@@ -1343,9 +1409,9 @@
           </td>
           <td class="num">67</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">67</td>
           <td class="num">67.0</td>
@@ -1362,9 +1428,9 @@
           </td>
           <td class="num">68</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">68</td>
           <td class="num">68.0</td>
@@ -1381,9 +1447,9 @@
           </td>
           <td class="num">69</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">69</td>
           <td class="num">69.0</td>
@@ -1400,9 +1466,9 @@
           </td>
           <td class="num">70</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">70</td>
           <td class="num">70.0</td>
@@ -1419,9 +1485,9 @@
           </td>
           <td class="num">71</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">71</td>
           <td class="num">71.0</td>
@@ -1438,9 +1504,9 @@
           </td>
           <td class="num">72</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">72</td>
           <td class="num">72.0</td>
@@ -1457,9 +1523,9 @@
           </td>
           <td class="num">73</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">73</td>
           <td class="num">73.0</td>
@@ -1476,9 +1542,9 @@
           </td>
           <td class="num">74</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">74</td>
           <td class="num">74.0</td>
@@ -1495,9 +1561,9 @@
           </td>
           <td class="num">75</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">75</td>
           <td class="num">75.0</td>
@@ -1514,9 +1580,9 @@
           </td>
           <td class="num">76</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">76</td>
           <td class="num">76.0</td>
@@ -1533,9 +1599,9 @@
           </td>
           <td class="num">77</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">77</td>
           <td class="num">77.0</td>
@@ -1552,9 +1618,9 @@
           </td>
           <td class="num">78</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">78</td>
           <td class="num">78.0</td>
@@ -1571,9 +1637,9 @@
           </td>
           <td class="num">79</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">79</td>
           <td class="num">79.0</td>
@@ -1590,9 +1656,9 @@
           </td>
           <td class="num">80</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">80</td>
           <td class="num">80.0</td>
@@ -1609,9 +1675,9 @@
           </td>
           <td class="num">81</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">81</td>
           <td class="num">81.0</td>
@@ -1628,9 +1694,9 @@
           </td>
           <td class="num">82</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">82</td>
           <td class="num">82.0</td>
@@ -1647,9 +1713,9 @@
           </td>
           <td class="num">83</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">83</td>
           <td class="num">83.0</td>
@@ -1666,9 +1732,9 @@
           </td>
           <td class="num">84</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">84</td>
           <td class="num">84.0</td>
@@ -1685,9 +1751,9 @@
           </td>
           <td class="num">85</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">85</td>
           <td class="num">85.0</td>
@@ -1704,9 +1770,9 @@
           </td>
           <td class="num">86</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">86</td>
           <td class="num">86.0</td>
@@ -1723,9 +1789,9 @@
           </td>
           <td class="num">87</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">87</td>
           <td class="num">87.0</td>
@@ -1742,9 +1808,9 @@
           </td>
           <td class="num">88</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">88</td>
           <td class="num">88.0</td>
@@ -1761,9 +1827,9 @@
           </td>
           <td class="num">89</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">89</td>
           <td class="num">89.0</td>
@@ -1780,9 +1846,9 @@
           </td>
           <td class="num">90</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">90</td>
           <td class="num">90.0</td>
@@ -1799,9 +1865,9 @@
           </td>
           <td class="num">91</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">91</td>
           <td class="num">91.0</td>
@@ -1818,9 +1884,9 @@
           </td>
           <td class="num">92</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">92</td>
           <td class="num">92.0</td>
@@ -1837,9 +1903,9 @@
           </td>
           <td class="num">93</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">93</td>
           <td class="num">93.0</td>
@@ -1856,9 +1922,9 @@
           </td>
           <td class="num">94</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">94</td>
           <td class="num">94.0</td>
@@ -1875,9 +1941,9 @@
           </td>
           <td class="num">95</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">95</td>
           <td class="num">95.0</td>
@@ -1894,9 +1960,9 @@
           </td>
           <td class="num">96</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">96</td>
           <td class="num">96.0</td>
@@ -1913,9 +1979,9 @@
           </td>
           <td class="num">97</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">97</td>
           <td class="num">97.0</td>
@@ -1932,9 +1998,9 @@
           </td>
           <td class="num">98</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">98</td>
           <td class="num">98.0</td>
@@ -1951,9 +2017,9 @@
           </td>
           <td class="num">99</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">99</td>
           <td class="num">99.0</td>
@@ -1970,9 +2036,9 @@
           </td>
           <td class="num">100</td>
           <td class="num">
-0          </td>
-          <td class="num">2</td>
-          <td class="num">2/2</td>
+          </td>
+          <td class="num">1</td>
+          <td class="num">1/1</td>
           <td class="num">0</td>
           <td class="num">100</td>
           <td class="num">100.0</td>
@@ -1984,5 +2050,40 @@
       </tbody>
     </table>
   </section>
+  <script>
+    // Tooltip functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const tooltipHeaders = document.querySelectorAll('.tooltip-header');
+      
+      tooltipHeaders.forEach(header => {
+        // Create tooltip element
+        const tooltipText = header.dataset.tooltip;
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        // Replace literal \n with actual line breaks for proper text wrapping
+        tooltip.textContent = tooltipText.replace(/\\n/g, '\n');
+        header.appendChild(tooltip);
+        
+        // Show tooltip on hover
+        header.addEventListener('mouseenter', function() {
+          tooltip.classList.add('show');
+        });
+        header.addEventListener('mouseleave', function() {
+          tooltip.classList.remove('show');
+        });
+        
+        // Show/hide tooltip on click for touch devices
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tooltip.classList.toggle('show');
+        });
+      });
+      
+      // Close tooltips when clicking elsewhere
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show'));
+      });
+    });
+  </script>
 </body>
 </html>

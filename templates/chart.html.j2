@@ -19,20 +19,20 @@
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Score</th>
-          <th>Type</th>
-          <th>Cur</th>
-          <th>WoW</th>
-          <th>Weeks</th>
-          <th>Streak</th>
-          <th>Re</th>
-          <th>Best</th>
-          <th>Avg</th>
-          <th>Track</th>
-          <th>Mix</th>
-          <th>Artists</th>
-          <th>Remixers</th>
+          <th class="tooltip-header" data-tooltip="Rank in this table\nPosition after sorting tracks by Durability Score for this chart and week.">#</th>
+          <th class="tooltip-header" data-tooltip="Durability score\nComposite score that emphasizes how long and how consistently a track has appeared on this chart.\n\nBuilt from:\n• weeks present\n• stability (low volatility)\n• momentum (secondary)\n• re-entries\n• chart context\n\nHigher score = more durable over time.\nNot a popularity or quality judgment.">Score</th>
+          <th class="tooltip-header" data-tooltip="Durability pattern\nQualitative classification based on observed behavior:\n\n• Anchor — long-lasting, stable presence\n• Climber — short history, improving position\n• Fader — long presence, currently declining\n• Spike — brief, volatile peak\n\nDerived from raw metrics; no single metric decides this.">Type</th>
+          <th class="tooltip-header" data-tooltip="Current rank\nTrack's most recent chart position for this week.\nLower numbers are better.\n\nBlank means the track is not present this week.">Cur</th>
+          <th class="tooltip-header" data-tooltip="Week-over-week movement\nChange in rank compared to the previous week.\n\n• Positive = moved up\n• Negative = moved down\n• Zero = unchanged\n\nSmaller movements matter more than large one-week jumps.">WoW</th>
+          <th class="tooltip-header" data-tooltip="Weeks on chart\nTotal number of weeks this track has appeared on this chart.\n\nIncludes non-consecutive appearances.\nThis is the strongest durability signal.">Weeks</th>
+          <th class="tooltip-header" data-tooltip="Current / longest streak\nLeft number: consecutive weeks currently on chart\nRight number: longest uninterrupted run\n\nBreaks indicate exits and re-entries.">Streak</th>
+          <th class="tooltip-header" data-tooltip="Re-entries\nNumber of times the track exited and later re-entered the chart.\n\nRe-entries often indicate rediscovery or long-term DJ utility.">Re</th>
+          <th class="tooltip-header" data-tooltip="Peak rank\nHighest (best) chart position the track has ever reached.\n\nUsed for context only — peak alone does not imply durability.">Best</th>
+          <th class="tooltip-header" data-tooltip="Average rank\nAverage chart position across all appearances.\n\nRepresents where the track typically lives, not just its peak.">Avg</th>
+          <th class="tooltip-header" data-tooltip="Track title\nCanonical track name as listed on Beatport.\n\nLinks to the Beatport track page.">Track</th>
+          <th class="tooltip-header" data-tooltip="Mix / version\nSpecific mix or version of the track\n(e.g. Extended Mix, Original Mix).\n\nSeparated to avoid duplication in the title.">Mix</th>
+          <th class="tooltip-header" data-tooltip="Primary artists\nMain credited artists for the track.">Artists</th>
+          <th class="tooltip-header" data-tooltip="Remix artists\nArtists credited for remixing this version, if any.\n\nBlank means the track is not a remix.">Remixers</th>
         </tr>
       </thead>
       <tbody>
@@ -68,5 +68,40 @@
       </tbody>
     </table>
   </section>
+  <script>
+    // Tooltip functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const tooltipHeaders = document.querySelectorAll('.tooltip-header');
+      
+      tooltipHeaders.forEach(header => {
+        // Create tooltip element
+        const tooltipText = header.dataset.tooltip;
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        // Replace literal \n with actual line breaks for proper text wrapping
+        tooltip.textContent = tooltipText.replace(/\\n/g, '\n');
+        header.appendChild(tooltip);
+        
+        // Show tooltip on hover
+        header.addEventListener('mouseenter', function() {
+          tooltip.classList.add('show');
+        });
+        header.addEventListener('mouseleave', function() {
+          tooltip.classList.remove('show');
+        });
+        
+        // Show/hide tooltip on click for touch devices
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tooltip.classList.toggle('show');
+        });
+      });
+      
+      // Close tooltips when clicking elsewhere
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show'));
+      });
+    });
+  </script>
 </body>
 </html>

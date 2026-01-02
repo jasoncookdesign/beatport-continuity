@@ -16,7 +16,7 @@
     h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
     h2 { margin: 0 0 0.5rem 0; }
     .muted { color: var(--muted); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: hidden; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
     th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -44,4 +44,70 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+  /* Tooltip header wrapper */
+.tooltip-header{
+  position: relative;
+  cursor: help;
+  user-select: none;
+  overflow: visible !important; /* ensure tooltip isn't clipped by cell */
+}
+
+/* Tooltip bubble */
+.tooltip{
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  /* Visuals */
+  background: rgba(23, 27, 35, 0.98);
+  border: 1px solid rgba(84, 193, 255, 0.6);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+  /* Critical: stop inheriting TH typography */
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  line-height: 1.35;
+
+  /* Readability + wrapping */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+
+  /* Width */
+  width: max-content;
+  max-width: min(420px, 90vw);
+
+  /* Don’t steal hover; keeps hover stable */
+  pointer-events: none;
+}
+
+/* Show on hover (CSS-only) */
+.tooltip-header:hover .tooltip{
+  display: block;
+}
+
+/* Arrow */
+.tooltip::after{
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(84, 193, 255, 0.6);
+}
+
+/* Optional: soften hover highlight so it doesn't fight the tooltip */
+.tooltip-header:hover{
+  background: rgba(255,255,255,0.04);
+}
   </style>
