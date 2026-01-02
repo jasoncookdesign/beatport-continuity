@@ -60,6 +60,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "chart_type": "hype",
         "genre_slug": "overall",
         "name": "Beatport Hype 100",
-        "url": "https://www.beatport.com/hype",
+        "url": "https://www.beatport.com/hype-100",
     },
 ]
