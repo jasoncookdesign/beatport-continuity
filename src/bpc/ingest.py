@@ -81,6 +81,9 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
                         "id": entry["track_id"],
                         "title": entry["title"],
                         "url": entry["url"],
+                        "mix_name": entry.get("mix_name"),
+                        "artists": ", ".join(entry.get("artists", [])) or None,
+                        "remixers": ", ".join(entry.get("remixers", [])) or None,
                     },
                 )
                 insert_entry(conn, snapshot_id, entry["track_id"], int(entry["rank"]))

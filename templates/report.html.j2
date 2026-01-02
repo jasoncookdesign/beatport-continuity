@@ -71,6 +71,9 @@
             <th>Best</th>
             <th>Avg</th>
             <th>Track</th>
+            <th>Mix</th>
+            <th>Artists</th>
+            <th>Remixers</th>
           </tr>
         </thead>
         <tbody>
@@ -98,6 +101,9 @@
             <td class="num">{{ row.best_rank }}</td>
             <td class="num">{{ '%.1f'|format(row.avg_rank) }}</td>
             <td><a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a></td>
+            <td class="num">{{ row.mix_name or '' }}</td>
+            <td>{{ row.artists }}</td>
+            <td>{{ row.remixers }}</td>
           </tr>
           {% endfor %}
         </tbody>
