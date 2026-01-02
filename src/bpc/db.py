@@ -58,6 +58,50 @@ def init_db(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_chart_entries_track
             ON chart_entries(track_id);
+
+        CREATE TABLE IF NOT EXISTS durability_metrics (
+            chart_id TEXT NOT NULL,
+            track_id TEXT NOT NULL,
+            as_of_week TEXT NOT NULL,
+
+            weeks_on_chart INTEGER NOT NULL,
+            first_seen_week TEXT NOT NULL,
+            last_seen_week TEXT NOT NULL,
+            age_weeks INTEGER NOT NULL,
+            presence_ratio REAL NOT NULL,
+
+            current_streak_weeks INTEGER NOT NULL,
+            max_streak_weeks INTEGER NOT NULL,
+            reentry_count INTEGER NOT NULL,
+            segments_count INTEGER NOT NULL,
+
+            best_rank INTEGER NOT NULL,
+            best_rank_week TEXT NOT NULL,
+            avg_rank REAL NOT NULL,
+            rank_stddev REAL NOT NULL,
+
+            top10_weeks INTEGER NOT NULL,
+            top25_weeks INTEGER NOT NULL,
+
+            last_rank INTEGER,
+            prev_rank INTEGER,
+            wow_delta INTEGER,
+
+            momentum_4w REAL,
+            volatility_4w REAL,
+
+            durability_score REAL NOT NULL,
+
+            PRIMARY KEY (chart_id, track_id, as_of_week),
+            FOREIGN KEY(chart_id) REFERENCES charts(id),
+            FOREIGN KEY(track_id) REFERENCES tracks(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_durability_chart_week
+            ON durability_metrics(chart_id, as_of_week);
+
+        CREATE INDEX IF NOT EXISTS idx_durability_chart_week_score
+            ON durability_metrics(chart_id, as_of_week, durability_score DESC);
         """
     )
     conn.commit()
