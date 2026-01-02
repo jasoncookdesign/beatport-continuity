@@ -11,6 +11,79 @@ from .logging_utils import get_logger
 
 LOG = get_logger(__name__)
 
+# Bucketing thresholds
+DUR_HIGH = 0.70
+STREAK_LONG = 4
+AGE_SHORT = 3
+AGE_LONG = 8
+VOL_LOW = 1.0
+VOL_HIGH = 4.0
+STDDEV_HIGH = 20.0
+PEAK_STRONG = 15
+MOM_POS = 2.0
+WOW_FALL = -3
+
+
+def bucket_row(row: Dict[str, object]) -> str:
+    """Derive a qualitative bucket for a durability row."""
+
+    durability_score = float(row["durability_score"])
+    max_streak_weeks = int(row["max_streak_weeks"])
+    volatility_4w = row.get("volatility_4w")
+    rank_stddev = row.get("rank_stddev")
+    age_weeks = row.get("age_weeks")
+    momentum_4w = row.get("momentum_4w")
+    wow_delta = row.get("wow_delta")
+    last_rank = row.get("last_rank")
+    weeks_on_chart = int(row["weeks_on_chart"])
+    best_rank = int(row["best_rank"])
+
+    # Anchor
+    if (
+        durability_score >= DUR_HIGH
+        and max_streak_weeks >= STREAK_LONG
+        and (
+            (volatility_4w is not None and volatility_4w <= VOL_LOW)
+            or (rank_stddev is not None and rank_stddev <= 10)
+        )
+    ):
+        return "Anchor"
+
+    # Spike
+    if (
+        weeks_on_chart <= 2
+        and best_rank <= PEAK_STRONG
+        and (
+            (volatility_4w is not None and volatility_4w >= VOL_HIGH)
+            or (rank_stddev is not None and rank_stddev >= STDDEV_HIGH)
+        )
+    ):
+        return "Spike"
+
+    # Climber
+    if (
+        age_weeks is not None
+        and age_weeks <= AGE_SHORT
+        and (
+            (momentum_4w is not None and momentum_4w >= MOM_POS)
+            or (wow_delta is not None and wow_delta >= 3)
+        )
+        and last_rank is not None
+    ):
+        return "Climber"
+
+    # Fader
+    if (
+        weeks_on_chart >= AGE_LONG
+        and (
+            (wow_delta is not None and wow_delta <= WOW_FALL)
+            or (momentum_4w is not None and momentum_4w < 0)
+        )
+    ):
+        return "Fader"
+
+    return "—"
+
 
 def _resolve_target_weeks(conn, snapshot_date: Optional[date]):
     target_iso = snapshot_date.isoformat() if snapshot_date else None
@@ -61,20 +134,25 @@ def _fetch_rows_for_chart(conn, chart_id: str, as_of_week: str) -> List[Dict[str
     rows = conn.execute(
         """
         SELECT
-          dm.track_id,
-          t.title,
-          t.url,
-          dm.durability_score,
-          dm.weeks_on_chart,
-          dm.current_streak_weeks,
-          dm.max_streak_weeks,
-          dm.reentry_count,
-          dm.best_rank,
-          dm.avg_rank,
-          dm.last_rank,
-          dm.wow_delta,
-          dm.top10_weeks,
-          dm.top25_weeks
+                        dm.track_id,
+                        t.title,
+                        t.url,
+                        dm.durability_score,
+                        dm.weeks_on_chart,
+                        dm.current_streak_weeks,
+                        dm.max_streak_weeks,
+                        dm.reentry_count,
+                        dm.best_rank,
+                        dm.avg_rank,
+                        dm.last_rank,
+                        dm.wow_delta,
+                        dm.rank_stddev,
+                        dm.age_weeks,
+                        dm.momentum_4w,
+                        dm.volatility_4w,
+                        dm.presence_ratio,
+                        dm.top10_weeks,
+                        dm.top25_weeks
         FROM durability_metrics dm
         JOIN tracks t ON t.id = dm.track_id
         WHERE dm.chart_id = ? AND dm.as_of_week = ?
@@ -99,10 +177,18 @@ def _fetch_rows_for_chart(conn, chart_id: str, as_of_week: str) -> List[Dict[str
                 "avg_rank": float(r[9]),
                 "last_rank": r[10] if r[10] is not None else None,
                 "wow_delta": r[11] if r[11] is not None else None,
-                "top10_weeks": int(r[12]),
-                "top25_weeks": int(r[13]),
+                "rank_stddev": float(r[12]) if r[12] is not None else None,
+                "age_weeks": int(r[13]) if r[13] is not None else None,
+                "momentum_4w": float(r[14]) if r[14] is not None else None,
+                "volatility_4w": float(r[15]) if r[15] is not None else None,
+                "presence_ratio": float(r[16]) if r[16] is not None else None,
+                "top10_weeks": int(r[17]),
+                "top25_weeks": int(r[18]),
             }
         )
+
+    for row in out:
+        row["bucket"] = bucket_row(row)
     return out
 
 
