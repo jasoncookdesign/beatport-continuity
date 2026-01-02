@@ -62,6 +62,7 @@
           <tr>
             <th>#</th>
             <th>Score</th>
+            <th>Type</th>
             <th>Cur</th>
             <th>WoW</th>
             <th>Weeks</th>
@@ -77,6 +78,13 @@
           <tr class="{% if row.last_rank is none %}dim{% endif %}">
             <td class="num">{{ loop.index }}</td>
             <td class="score">{{ '%.4f'|format(row.durability_score) }}</td>
+            <td>
+              {% if row.bucket != '—' %}
+                <span class="badge">{{ row.bucket }}</span>
+              {% else %}
+                {{ row.bucket }}
+              {% endif %}
+            </td>
             <td class="num">{{ row.last_rank if row.last_rank is not none else '' }}</td>
             <td class="num">
               {% if row.wow_delta is none %}

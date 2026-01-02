@@ -14,7 +14,7 @@ from .report import run_report
 from .status import run_status
 from .diagnose import run_diagnose
 from .logging_utils import get_logger
-from .time_utils import today_bucket
+from .time_utils import today_bucket, week_bucket
 
 LOG = get_logger(__name__)
 
@@ -32,7 +32,8 @@ def handle_init_db(_args: argparse.Namespace) -> None:
 
 
 def _resolve_snapshot_date(args: argparse.Namespace) -> date:
-    return args.snapshot_date or today_bucket()
+    raw_date = args.snapshot_date or today_bucket()
+    return week_bucket(raw_date)
 
 
 def handle_ingest(args: argparse.Namespace) -> None:
@@ -67,13 +68,14 @@ def handle_compute(args: argparse.Namespace) -> None:
 
 
 def handle_report(args: argparse.Namespace) -> None:
+    snap_date = _resolve_snapshot_date(args)
     paths = load_paths()
     db_path = paths.db
 
     conn = get_conn(str(db_path))
     try:
         init_db(conn)
-        output = run_report(conn, args.snapshot_date)
+        output = run_report(conn, snap_date)
     finally:
         conn.close()
 
@@ -106,6 +108,7 @@ def handle_status(_args: argparse.Namespace) -> None:
 
 
 def handle_diagnose(args: argparse.Namespace) -> int:
+    snap_date = _resolve_snapshot_date(args)
     paths = load_paths()
     paths.data.mkdir(parents=True, exist_ok=True)
     db_path = paths.db
@@ -113,7 +116,7 @@ def handle_diagnose(args: argparse.Namespace) -> int:
     conn = get_conn(str(db_path))
     try:
         init_db(conn)
-        return run_diagnose(conn, args.snapshot_date)
+        return run_diagnose(conn, snap_date)
     finally:
         conn.close()
 
