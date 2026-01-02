@@ -22,7 +22,7 @@
     h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
     h2 { margin: 0 0 0.5rem 0; }
     .muted { color: var(--muted); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: hidden; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
     th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -50,12 +50,78 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+  /* Tooltip header wrapper */
+.tooltip-header{
+  position: relative;
+  cursor: help;
+  user-select: none;
+  overflow: visible !important; /* ensure tooltip isn't clipped by cell */
+}
+
+/* Tooltip bubble */
+.tooltip{
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  /* Visuals */
+  background: rgba(23, 27, 35, 0.98);
+  border: 1px solid rgba(84, 193, 255, 0.6);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+  /* Critical: stop inheriting TH typography */
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  line-height: 1.35;
+
+  /* Readability + wrapping */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+
+  /* Width */
+  width: max-content;
+  max-width: min(420px, 90vw);
+
+  /* Don’t steal hover; keeps hover stable */
+  pointer-events: none;
+}
+
+/* Show on hover (CSS-only) */
+.tooltip-header:hover .tooltip{
+  display: block;
+}
+
+/* Arrow */
+.tooltip::after{
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(84, 193, 255, 0.6);
+}
+
+/* Optional: soften hover highlight so it doesn't fight the tooltip */
+.tooltip-header:hover{
+  background: rgba(255,255,255,0.04);
+}
   </style></head>
 <body>
   <header>
     <h1>Beatport Continuity</h1>
     <div class="header-meta">
-      <span class="muted">Generated 2026-01-02T22:58:50</span>
+      <span class="muted">Generated 2026-01-02T23:23:58</span>
     </div>
   </header>
   <div class="charts card-grid">
@@ -63,7 +129,7 @@
       <div class="card-header">
         <div>
           <h2>Bass Club Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/bass-club-top-100.html">View full chart</a></div>
       </div>
@@ -129,7 +195,7 @@
       <div class="card-header">
         <div>
           <h2>Beatport Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/overall-hype-100.html">View full chart</a></div>
       </div>
@@ -195,13 +261,24 @@
       <div class="card-header">
         <div>
           <h2>Beatport Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 3 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/overall-top-100.html">View full chart</a></div>
       </div>
       <ol class="top-list">
         <li>
           <span class="top-rank">1</span>
+          <div class="top-body">
+            <div class="top-title">
+              <a href="https://www.beatport.com/track/positive/22236272" target="_blank" rel="noopener noreferrer">Positive</a>
+<span class="mix">· Extended Mix</span>            </div>
+            <div class="top-sub">
+              <span>Jamback</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="top-rank">2</span>
           <div class="top-body">
             <div class="top-title">
               <a href="https://www.beatport.com/track/lost/22738898" target="_blank" rel="noopener noreferrer">Lost</a>
@@ -212,7 +289,7 @@
           </div>
         </li>
         <li>
-          <span class="top-rank">2</span>
+          <span class="top-rank">3</span>
           <div class="top-body">
             <div class="top-title">
               <a href="https://www.beatport.com/track/jamaican-bam-bam/22357262" target="_blank" rel="noopener noreferrer">Jamaican (Bam Bam)</a>
@@ -223,7 +300,18 @@
           </div>
         </li>
         <li>
-          <span class="top-rank">3</span>
+          <span class="top-rank">4</span>
+          <div class="top-body">
+            <div class="top-title">
+              <a href="https://www.beatport.com/track/kids/22448219" target="_blank" rel="noopener noreferrer">Kids</a>
+<span class="mix">· Extended Mix</span>            </div>
+            <div class="top-sub">
+              <span>Fezzo</span>
+            </div>
+          </div>
+        </li>
+        <li>
+          <span class="top-rank">5</span>
           <div class="top-body">
             <div class="top-title">
               <a href="https://www.beatport.com/track/free-you-got-to-live/22366666" target="_blank" rel="noopener noreferrer">Free (You Got To Live)</a>
@@ -233,35 +321,13 @@
             </div>
           </div>
         </li>
-        <li>
-          <span class="top-rank">4</span>
-          <div class="top-body">
-            <div class="top-title">
-              <a href="https://www.beatport.com/track/pull-up/22866908" target="_blank" rel="noopener noreferrer">Pull Up</a>
-<span class="mix">· Extended Mix</span>            </div>
-            <div class="top-sub">
-              <span>Discip</span>
-            </div>
-          </div>
-        </li>
-        <li>
-          <span class="top-rank">5</span>
-          <div class="top-body">
-            <div class="top-title">
-              <a href="https://www.beatport.com/track/caramelle/22741059" target="_blank" rel="noopener noreferrer">Caramelle</a>
-<span class="mix">· Extended Mix</span>            </div>
-            <div class="top-sub">
-              <span>Mesto</span>
-            </div>
-          </div>
-        </li>
       </ol>
     </section>
     <section class="panel">
       <div class="card-header">
         <div>
           <h2>Breaks / Breakbeat / UK Bass Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/breaks-top-100.html">View full chart</a></div>
       </div>
@@ -327,7 +393,7 @@
       <div class="card-header">
         <div>
           <h2>Deep Dubstep / Grime Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/deep-dubstep-grime-top-100.html">View full chart</a></div>
       </div>
@@ -393,7 +459,7 @@
       <div class="card-header">
         <div>
           <h2>Deep House Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/deep-house-hype-100.html">View full chart</a></div>
       </div>
@@ -459,7 +525,7 @@
       <div class="card-header">
         <div>
           <h2>Deep House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/deep-house-top-100.html">View full chart</a></div>
       </div>
@@ -525,7 +591,7 @@
       <div class="card-header">
         <div>
           <h2>House Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/house-hype-100.html">View full chart</a></div>
       </div>
@@ -591,7 +657,7 @@
       <div class="card-header">
         <div>
           <h2>House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 3 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/house-top-100.html">View full chart</a></div>
       </div>
@@ -657,7 +723,7 @@
       <div class="card-header">
         <div>
           <h2>Jackin House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/jackin-house-top-100.html">View full chart</a></div>
       </div>
@@ -723,7 +789,7 @@
       <div class="card-header">
         <div>
           <h2>Mainstage Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/mainstage-hype-100.html">View full chart</a></div>
       </div>
@@ -789,7 +855,7 @@
       <div class="card-header">
         <div>
           <h2>Mainstage Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/mainstage-top-100.html">View full chart</a></div>
       </div>
@@ -855,7 +921,7 @@
       <div class="card-header">
         <div>
           <h2>Melodic House & Techno Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/melodic-house-techno-hype-100.html">View full chart</a></div>
       </div>
@@ -921,7 +987,7 @@
       <div class="card-header">
         <div>
           <h2>Melodic House & Techno Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/melodic-house-techno-top-100.html">View full chart</a></div>
       </div>
@@ -987,7 +1053,7 @@
       <div class="card-header">
         <div>
           <h2>Minimal / Deep Tech Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/minimal-deep-tech-hype-100.html">View full chart</a></div>
       </div>
@@ -1053,7 +1119,7 @@
       <div class="card-header">
         <div>
           <h2>Minimal / Deep Tech Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/minimal-deep-tech-top-100.html">View full chart</a></div>
       </div>
@@ -1119,7 +1185,7 @@
       <div class="card-header">
         <div>
           <h2>Organic House Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/organic-house-hype-100.html">View full chart</a></div>
       </div>
@@ -1185,7 +1251,7 @@
       <div class="card-header">
         <div>
           <h2>Organic House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/organic-house-top-100.html">View full chart</a></div>
       </div>
@@ -1251,7 +1317,7 @@
       <div class="card-header">
         <div>
           <h2>Progressive House Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/progressive-house-hype-100.html">View full chart</a></div>
       </div>
@@ -1317,7 +1383,7 @@
       <div class="card-header">
         <div>
           <h2>Progressive House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/progressive-house-top-100.html">View full chart</a></div>
       </div>
@@ -1383,7 +1449,7 @@
       <div class="card-header">
         <div>
           <h2>Tech House Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/tech-house-hype-100.html">View full chart</a></div>
       </div>
@@ -1449,7 +1515,7 @@
       <div class="card-header">
         <div>
           <h2>Tech House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/tech-house-top-100.html">View full chart</a></div>
       </div>
@@ -1514,30 +1580,8 @@
     <section class="panel">
       <div class="card-header">
         <div>
-          <h2>Tech House Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 1 observed weeks</div>
-        </div>
-        <div class="badge"><a href="charts/top100:tech-house.html">View full chart</a></div>
-      </div>
-      <ol class="top-list">
-        <li>
-          <span class="top-rank">1</span>
-          <div class="top-body">
-            <div class="top-title">
-              <a href="https://example.com/t1" target="_blank" rel="noopener noreferrer">Test Track</a>
-            </div>
-            <div class="top-sub">
-              <span></span>
-            </div>
-          </div>
-        </li>
-      </ol>
-    </section>
-    <section class="panel">
-      <div class="card-header">
-        <div>
           <h2>Techno (Peak Time / Driving) Hype 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/techno-ptd-hype-100.html">View full chart</a></div>
       </div>
@@ -1603,7 +1647,7 @@
       <div class="card-header">
         <div>
           <h2>Techno (Peak Time / Driving) Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/techno-ptd-top-100.html">View full chart</a></div>
       </div>
@@ -1669,7 +1713,7 @@
       <div class="card-header">
         <div>
           <h2>Techno (Peak Time / Driving) Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 3 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/techno-top-100.html">View full chart</a></div>
       </div>
@@ -1735,7 +1779,7 @@
       <div class="card-header">
         <div>
           <h2>Techno (Raw / Deep / Hypnotic) Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/techno-rdh-top-100.html">View full chart</a></div>
       </div>
@@ -1801,7 +1845,7 @@
       <div class="card-header">
         <div>
           <h2>Trap / Future Bass Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/trap-future-bass-top-100.html">View full chart</a></div>
       </div>
@@ -1867,7 +1911,7 @@
       <div class="card-header">
         <div>
           <h2>UK Garage / Bassline Top 100</h2>
-          <div class="muted">As of week 2026-01-05 · 2 observed weeks</div>
+          <div class="muted">As of week 2025-12-29 · 1 observed weeks</div>
         </div>
         <div class="badge"><a href="charts/uk-garage-bassline-top-100.html">View full chart</a></div>
       </div>
