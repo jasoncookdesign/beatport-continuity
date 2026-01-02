@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -36,6 +37,28 @@ def fetch_chart_html(url: str) -> str:
     resp = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
     resp.raise_for_status()
     return resp.text
+
+
+def fetch_chart_html_with_retry(
+    url: str,
+    attempts: int = 3,
+    base_delay: float = 1.0,
+) -> str:
+    """Fetch HTML with exponential backoff on network/HTTP errors."""
+
+    last_err: Optional[Exception] = None
+    for n in range(1, attempts + 1):
+        try:
+            return fetch_chart_html(url)
+        except requests.RequestException as exc:
+            last_err = exc
+            if n == attempts:
+                break
+            sleep_for = base_delay * (2 ** (n - 1))
+            time.sleep(sleep_for)
+
+    assert last_err is not None
+    raise last_err
 
 
 def _build_url(href: str | None) -> str | None:
