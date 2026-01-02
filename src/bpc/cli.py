@@ -11,6 +11,7 @@ from .db import get_conn, init_db
 from .ingest import run_ingestion
 from .compute import run_compute
 from .report import run_report
+from .status import run_status
 from .logging_utils import get_logger
 from .time_utils import today_bucket
 
@@ -90,6 +91,19 @@ def handle_run_all(args: argparse.Namespace) -> None:
         handler(args)
 
 
+def handle_status(_args: argparse.Namespace) -> None:
+    paths = load_paths()
+    paths.data.mkdir(parents=True, exist_ok=True)
+    db_path = paths.db
+
+    conn = get_conn(str(db_path))
+    try:
+        init_db(conn)
+        run_status(conn)
+    finally:
+        conn.close()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bpc",
@@ -103,6 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("compute", handle_compute, "Compute continuity/durability metrics"),
         ("report", handle_report, "Render HTML report"),
         ("run-all", handle_run_all, "Run init, ingest, compute, and report"),
+        ("status", handle_status, "Show pipeline status"),
     ]
 
     for name, handler, help_text in subcommands:
