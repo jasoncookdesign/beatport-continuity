@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ chart.chart_name }} | Beatport Continuity</title>
+{% include "_style.html.j2" %}
+</head>
+<body>
+  <a class="back-link" href="../index.html">← Back to overview</a>
+  <section class="panel">
+    <div class="card-header">
+      <div>
+        <h1>{{ chart.chart_name }}</h1>
+        <div class="muted">As of week {{ chart.as_of_week }} · {{ chart.weeks_observed_count }} observed weeks</div>
+      </div>
+      <div class="badge">Top {{ chart.rows|length }} tracks</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Score</th>
+          <th>Type</th>
+          <th>Cur</th>
+          <th>WoW</th>
+          <th>Weeks</th>
+          <th>Streak</th>
+          <th>Re</th>
+          <th>Best</th>
+          <th>Avg</th>
+          <th>Track</th>
+          <th>Mix</th>
+          <th>Artists</th>
+          <th>Remixers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in chart.rows %}
+        <tr class="{% if row.last_rank is none %}dim{% endif %}">
+          <td class="num">{{ loop.index }}</td>
+          <td class="score">{{ '%.4f'|format(row.durability_score) }}</td>
+          <td>
+            {% if row.bucket != '—' %}
+              <span class="badge">{{ row.bucket }}</span>
+            {% else %}
+              {{ row.bucket }}
+            {% endif %}
+          </td>
+          <td class="num">{{ row.last_rank if row.last_rank is not none else '' }}</td>
+          <td class="num">
+            {% if row.wow_delta is none %}
+            {% elif row.wow_delta > 0 %}<span class="delta-pos">+{{ row.wow_delta }}</span>
+            {% elif row.wow_delta < 0 %}<span class="delta-neg">{{ row.wow_delta }}</span>
+            {% else %}0{% endif %}
+          </td>
+          <td class="num">{{ row.weeks_on_chart }}</td>
+          <td class="num">{{ row.current_streak_weeks }}/{{ row.max_streak_weeks }}</td>
+          <td class="num">{{ row.reentry_count }}</td>
+          <td class="num">{{ row.best_rank }}</td>
+          <td class="num">{{ '%.1f'|format(row.avg_rank) }}</td>
+          <td><a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a></td>
+          <td class="num">{{ row.mix_name or '' }}</td>
+          <td>{{ row.artists }}</td>
+          <td>{{ row.remixers }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

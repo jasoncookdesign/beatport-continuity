@@ -22,10 +22,10 @@
     h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
     h2 { margin: 0 0 0.5rem 0; }
     .muted { color: var(--muted); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: hidden; }
     .charts { display: grid; gap: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
-    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
     tr:nth-child(even) { background: var(--table-stripe); }
     tr.dim td { color: var(--muted); }

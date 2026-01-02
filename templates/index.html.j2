@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beatport Continuity</title>
+{% include "_style.html.j2" %}
+</head>
+<body>
+  <header>
+    <h1>Beatport Continuity</h1>
+    <div class="header-meta">
+      <span class="muted">Generated {{ generated_at }}</span>
+    </div>
+  </header>
+  <div class="charts card-grid">
+    {% for chart in charts %}
+    <section class="panel">
+      <div class="card-header">
+        <div>
+          <h2>{{ chart.chart_name }}</h2>
+          <div class="muted">As of week {{ chart.as_of_week }} · {{ chart.weeks_observed_count }} observed weeks</div>
+        </div>
+        <div class="badge"><a href="{{ chart.page_href }}">View full chart</a></div>
+      </div>
+      <ol class="top-list">
+        {% for row in chart.top_rows %}
+        <li>
+          <span class="top-rank">{{ loop.index }}</span>
+          <div class="top-body">
+            <div class="top-title">
+              <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a>
+              {% if row.mix_name %}<span class="mix">· {{ row.mix_name }}</span>{% endif %}
+            </div>
+            <div class="top-sub">
+              <span>{{ row.artists }}</span>
+              {% if row.remixers %}<span>· {{ row.remixers }}</span>{% endif %}
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endfor %}
+  </div>
+</body>
+</html>

@@ -252,6 +252,35 @@ def _extract_mix_name(d: dict) -> Optional[str]:
     return None
 
 
+def _check_genre_supports_hype(next_data: dict) -> Optional[bool]:
+    """Check if genre has is_included_in_hype=true in __NEXT_DATA__.
+    
+    Returns:
+        True if genre supports hype (is_included_in_hype=true)
+        False if genre explicitly doesn't support hype (is_included_in_hype=false)
+        None if we can't determine (data not present)
+    """
+    try:
+        props = next_data.get("props") or {}
+        page_props = props.get("pageProps") or {}
+        dehydrated = page_props.get("dehydratedState") or {}
+        queries = dehydrated.get("queries") or []
+        
+        for query in queries:
+            if not isinstance(query, dict):
+                continue
+            state = query.get("state") or {}
+            data = state.get("data") or {}
+            
+            # Look for is_included_in_hype field in genre metadata
+            if "is_included_in_hype" in data:
+                return bool(data["is_included_in_hype"])
+        
+        return None
+    except Exception:
+        return None
+
+
 def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
     """Parse using Next.js __NEXT_DATA__ ordered lists (preferred path)."""
     soup = BeautifulSoup(html, "lxml")
@@ -349,9 +378,20 @@ def parse_chart(html: str) -> List[Dict[str, Any]]:
     """Parse a Beatport chart page into a list of track entries.
 
     Returns dictionaries with keys: track_id, title, mix_name, artists, remixers, url, rank.
-    Raises ValueError if no valid chart entries can be parsed.
+    Returns empty list for unsupported hype charts (is_included_in_hype=false).
+    Raises ValueError if no valid chart entries can be parsed from a supported chart.
     """
     soup = BeautifulSoup(html, "lxml")
+
+    # Check early if this is an unsupported hype chart
+    is_hype_request = "hype=true" in html
+    if is_hype_request:
+        next_data = _find_next_data_json(soup)
+        if next_data:
+            supports_hype = _check_genre_supports_hype(next_data)
+            if supports_hype is False:
+                # Genre explicitly doesn't support hype; return empty (not an error)
+                return []
 
     # Prefer __NEXT_DATA__ for structured fields
     entries = _parse_chart_from_next_data_order(html, limit=DEFAULT_LIMIT)

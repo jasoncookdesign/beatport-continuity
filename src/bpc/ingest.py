@@ -48,6 +48,14 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
                 )
                 raise parse_exc
 
+            # Handle unsupported hype charts gracefully
+            if len(entries) == 0 and "-hype-" in chart_id:
+                LOG.info(
+                    "Skipping unsupported hype chart %s (Beatport reports is_included_in_hype=false)",
+                    chart_id,
+                )
+                continue
+
             LOG.info("Parsed %d entries for chart %s", len(entries), chart_id)
             if len(entries) < 100:
                 LOG.warning("Parsed %d entries for chart %s (expected up to 100)", len(entries), chart_id)
