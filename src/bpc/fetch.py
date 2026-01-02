@@ -123,7 +123,7 @@ def _parse_chart_from_analytics_dom(soup: BeautifulSoup) -> List[Dict[str, str |
     return entries
 
 
-def _parse_chart_from_dom_order(soup: BeautifulSoup, limit: int = DEFAULT_LIMIT) -> List[Dict[str, str | int]]:
+def _parse_chart_from_dom_order(soup: BeautifulSoup, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
     """Fallback DOM parser: derive rank from appearance order of track links.
 
     This works even when explicit rank fields are not embedded in HTML.
@@ -157,6 +157,9 @@ def _parse_chart_from_dom_order(soup: BeautifulSoup, limit: int = DEFAULT_LIMIT)
             {
                 "track_id": track_id,
                 "title": title,
+                "mix_name": None,
+                "artists": [],
+                "remixers": [],
                 "url": url,
                 "rank": len(out) + 1,
             }
@@ -230,10 +233,27 @@ def _extract_track_href_from_track_obj(d: dict) -> Optional[str]:
     return None
 
 
-def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, str | int]]:
-    """Fallback parse using Next.js __NEXT_DATA__:
-    find the best list of track-like dicts and assign rank by list order.
-    """
+def _extract_people(objs: Any) -> List[str]:
+    names: List[str] = []
+    if isinstance(objs, list):
+        for o in objs:
+            if isinstance(o, dict):
+                name = o.get("name") or o.get("title")
+                if isinstance(name, str) and name.strip():
+                    names.append(name.strip())
+    return names
+
+
+def _extract_mix_name(d: dict) -> Optional[str]:
+    for key in ("mix", "mix_name", "mixName"):
+        v = d.get(key)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return None
+
+
+def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> List[Dict[str, Any]]:
+    """Parse using Next.js __NEXT_DATA__ ordered lists (preferred path)."""
     soup = BeautifulSoup(html, "lxml")
     next_data = _find_next_data_json(soup)
     if not next_data:
@@ -280,7 +300,7 @@ def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> 
     if not best_list:
         return []
 
-    out: List[Dict[str, str | int]] = []
+    out: List[Dict[str, Any]] = []
     seen: set[str] = set()
 
     for item in best_list:
@@ -304,11 +324,17 @@ def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> 
 
         url = _build_url(href) or href
         title = (item.get("name") or item.get("title") or "").strip() or f"track-{track_id}"
+        mix_name = _extract_mix_name(item)
+        artists = _extract_people(item.get("artists"))
+        remixers = _extract_people(item.get("remixers"))
 
         out.append(
             {
                 "track_id": track_id,
                 "title": title,
+                "mix_name": mix_name,
+                "artists": artists,
+                "remixers": remixers,
                 "url": str(url),
                 "rank": len(out) + 1,
             }
@@ -319,26 +345,30 @@ def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> 
     return out
 
 
-def parse_chart(html: str) -> List[Dict[str, str | int]]:
+def parse_chart(html: str) -> List[Dict[str, Any]]:
     """Parse a Beatport chart page into a list of track entries.
 
-    Returns dictionaries with keys: track_id, title, url, rank.
+    Returns dictionaries with keys: track_id, title, mix_name, artists, remixers, url, rank.
     Raises ValueError if no valid chart entries can be parsed.
     """
     soup = BeautifulSoup(html, "lxml")
 
-    # 1) Try explicit rank + title embedded in DOM (fast path)
+    # Prefer __NEXT_DATA__ for structured fields
+    entries = _parse_chart_from_next_data_order(html, limit=DEFAULT_LIMIT)
+    if entries:
+        return entries
+
+    # Fallback: explicit rank + title embedded in DOM (limited fields)
     entries = _parse_chart_from_analytics_dom(soup)
     if entries:
+        for e in entries:
+            e.setdefault("mix_name", None)
+            e.setdefault("artists", [])
+            e.setdefault("remixers", [])
         return entries
 
-    # 2) Fallback: derive rank from DOM order of track links
+    # Fallback: derive rank from DOM order of track links (limited fields)
     entries = _parse_chart_from_dom_order(soup, limit=DEFAULT_LIMIT)
-    if entries:
-        return entries
-
-    # 3) Fallback: derive rank from ordered track-like list in __NEXT_DATA__
-    entries = _parse_chart_from_next_data_order(html, limit=DEFAULT_LIMIT)
     if entries:
         return entries
 

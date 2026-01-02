@@ -106,6 +106,17 @@ def init_db(conn: sqlite3.Connection) -> None:
     )
     conn.commit()
 
+    # Lightweight migrations for tracks extra columns
+    _ensure_columns(
+        conn,
+        "tracks",
+        {
+            "artists": "TEXT",
+            "remixers": "TEXT",
+            "mix_name": "TEXT",
+        },
+    )
+
 
 def upsert_chart(conn: sqlite3.Connection, chart: Mapping[str, str]) -> None:
     """Insert or update a chart row.
@@ -129,16 +140,19 @@ def upsert_chart(conn: sqlite3.Connection, chart: Mapping[str, str]) -> None:
 def upsert_track(conn: sqlite3.Connection, track: Mapping[str, Optional[str]]) -> None:
     """Insert or update a track row.
 
-    Expected keys: id, title, url.
+    Expected keys: id, title, url, artists (optional), remixers (optional), mix_name (optional).
     """
 
     conn.execute(
         """
-        INSERT INTO tracks (id, title, url)
-        VALUES (:id, :title, :url)
+        INSERT INTO tracks (id, title, url, artists, remixers, mix_name)
+        VALUES (:id, :title, :url, :artists, :remixers, :mix_name)
         ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
-            url = excluded.url
+            url = excluded.url,
+            artists = excluded.artists,
+            remixers = excluded.remixers,
+            mix_name = excluded.mix_name
         """,
         track,
     )
@@ -146,6 +160,17 @@ def upsert_track(conn: sqlite3.Connection, track: Mapping[str, Optional[str]]) -
 
 def _build_snapshot_id(chart_id: str, snapshot_date: str) -> str:
     return f"{chart_id}:{snapshot_date}"
+
+
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: Mapping[str, str]) -> None:
+    cur = conn.cursor()
+    cur.execute(f"PRAGMA table_info({table})")
+    existing = {row[1] for row in cur.fetchall()}
+    for col, ddl_type in columns.items():
+        if col in existing:
+            continue
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl_type}")
+    conn.commit()
 
 
 def upsert_snapshot(
