@@ -80,7 +80,6 @@ def upsert_chart(conn: sqlite3.Connection, chart: Mapping[str, str]) -> None:
         """,
         chart,
     )
-    conn.commit()
 
 
 def upsert_track(conn: sqlite3.Connection, track: Mapping[str, Optional[str]]) -> None:
@@ -99,7 +98,6 @@ def upsert_track(conn: sqlite3.Connection, track: Mapping[str, Optional[str]]) -
         """,
         track,
     )
-    conn.commit()
 
 
 def _build_snapshot_id(chart_id: str, snapshot_date: str) -> str:
@@ -130,14 +128,12 @@ def upsert_snapshot(
         """
         INSERT INTO chart_snapshots (id, chart_id, snapshot_date, fetched_at, source_url)
         VALUES (:id, :chart_id, :snapshot_date, :fetched_at, :source_url)
-        ON CONFLICT(id) DO UPDATE SET
-            snapshot_date = excluded.snapshot_date,
+        ON CONFLICT(chart_id, snapshot_date) DO UPDATE SET
             fetched_at = excluded.fetched_at,
             source_url = excluded.source_url
         """,
         payload,
     )
-    conn.commit()
     return snapshot_id
 
 
@@ -161,4 +157,3 @@ def insert_entry(
         """,
         (snapshot_id, track_id, rank),
     )
-    conn.commit()
