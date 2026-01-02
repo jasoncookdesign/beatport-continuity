@@ -9,6 +9,7 @@ from .db import insert_entry, upsert_chart, upsert_snapshot, upsert_track
 from .fetch import fetch_chart_html_with_retry, parse_chart
 from .logging_utils import get_logger
 from .config import load_paths
+from .time_utils import week_bucket
 
 LOG = get_logger(__name__)
 
@@ -18,7 +19,9 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
 
     Each chart is handled in its own transaction; failures roll back per chart.
     """
-
+    if snapshot_date.weekday() != 0:
+        LOG.warning("Non-Monday snapshot_date received; bucketing applied")
+    snapshot_date = week_bucket(snapshot_date)
     snap_str = snapshot_date.isoformat()
 
     for chart in tracked_charts:
