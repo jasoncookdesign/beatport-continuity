@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime, date
+from pathlib import Path
 from typing import Iterable, Mapping
 
 from .db import insert_entry, upsert_chart, upsert_snapshot, upsert_track
 from .fetch import fetch_chart_html_with_retry, parse_chart
 from .logging_utils import get_logger
+from .config import load_paths
 
 LOG = get_logger(__name__)
 
@@ -27,7 +29,22 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
             html = fetch_chart_html_with_retry(url)
 
             LOG.info("Fetched chart %s", chart_id)
-            entries = parse_chart(html)
+            try:
+                entries = parse_chart(html)
+            except Exception as parse_exc:
+                debug_dir = load_paths().data / "debug"
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                debug_path = debug_dir / f"{chart_id}_{snap_str}.html"
+                debug_path.write_text(html[:200_000], encoding="utf-8", errors="ignore")
+                LOG.error(
+                    "Parse failure for chart %s (%s) snapshot %s; saved HTML to %s",
+                    chart_id,
+                    url,
+                    snap_str,
+                    debug_path,
+                )
+                raise parse_exc
+
             LOG.info("Parsed %d entries for chart %s", len(entries), chart_id)
             if len(entries) < 100:
                 LOG.warning("Parsed %d entries for chart %s (expected up to 100)", len(entries), chart_id)
