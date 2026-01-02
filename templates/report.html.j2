@@ -5,20 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Beatport Continuity Report</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
+    :root {
+      --bg: #0f1115;
+      --panel: #171b23;
+      --text: #e9ecf5;
+      --muted: #97a0b8;
+      --accent: #54c1ff;
+      --positive: #49d18b;
+      --negative: #ff5c8d;
+      --border: #222736;
+      --table-stripe: rgba(255, 255, 255, 0.02);
+    }
+    * { box-sizing: border-box; }
+    body { font-family: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
     header { margin-bottom: 2rem; }
-    h1 { font-size: 1.75rem; }
-    .section { margin-bottom: 1.5rem; }
-    .muted { color: #666; }
+    h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
+    h2 { margin: 0 0 0.5rem 0; }
+    .muted { color: var(--muted); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .charts { display: grid; gap: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    tr:nth-child(even) { background: var(--table-stripe); }
+    tr.dim td { color: var(--muted); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .legend { margin-top: 1.5rem; color: var(--muted); font-size: 0.92rem; }
+    .score { font-variant-numeric: tabular-nums; }
+    .num { font-variant-numeric: tabular-nums; }
+    .delta-pos { color: var(--positive); }
+    .delta-neg { color: var(--negative); }
+    .badge { display: inline-flex; align-items: center; padding: 0.1rem 0.4rem; border-radius: 999px; background: rgba(255,255,255,0.06); font-size: 0.78rem; color: var(--muted); }
+    .header-meta { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
   </style>
 </head>
 <body>
   <header>
     <h1>Beatport Continuity</h1>
-    <p class="muted">Generated {{ generated_at }}</p>
+    <div class="header-meta">
+      <span class="muted">Generated {{ generated_at }}</span>
+    </div>
   </header>
-  <section class="section">
-    <p>TODO: populate report body with chart snapshots and durability metrics.</p>
-  </section>
+  <div class="charts">
+    {% for chart in charts %}
+    <section class="panel">
+      <div style="display:flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <h2>{{ chart.chart_name }}</h2>
+          <div class="muted">As of week {{ chart.as_of_week }} · {{ chart.weeks_observed_count }} observed weeks</div>
+        </div>
+        <div class="badge">Top {{ chart.rows|length }} tracks</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Score</th>
+            <th>Cur</th>
+            <th>WoW</th>
+            <th>Weeks</th>
+            <th>Streak</th>
+            <th>Re</th>
+            <th>Best</th>
+            <th>Avg</th>
+            <th>Track</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in chart.rows %}
+          <tr class="{% if row.last_rank is none %}dim{% endif %}">
+            <td class="num">{{ loop.index }}</td>
+            <td class="score">{{ '%.4f'|format(row.durability_score) }}</td>
+            <td class="num">{{ row.last_rank if row.last_rank is not none else '' }}</td>
+            <td class="num">
+              {% if row.wow_delta is none %}
+              {% elif row.wow_delta > 0 %}<span class="delta-pos">+{{ row.wow_delta }}</span>
+              {% elif row.wow_delta < 0 %}<span class="delta-neg">{{ row.wow_delta }}</span>
+              {% else %}0{% endif %}
+            </td>
+            <td class="num">{{ row.weeks_on_chart }}</td>
+            <td class="num">{{ row.current_streak_weeks }}/{{ row.max_streak_weeks }}</td>
+            <td class="num">{{ row.reentry_count }}</td>
+            <td class="num">{{ row.best_rank }}</td>
+            <td class="num">{{ '%.1f'|format(row.avg_rank) }}</td>
+            <td><a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{{ row.title }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endfor %}
+  </div>
+
+  <div class="legend">
+    <strong>Legend:</strong>
+    Score = composite durability; Cur = last rank; WoW = week-over-week rank delta (positive rises); Weeks = total appearances; Streak = current/max contiguous weeks; Re = re-entries; Best/Avg = rank quality.
+  </div>
 </body>
 </html>
