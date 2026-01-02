@@ -116,6 +116,17 @@ def init_db(conn: sqlite3.Connection) -> None:
             "mix_name": "TEXT",
         },
     )
+    
+    # Lightweight migrations for chart_snapshots failure tracking
+    _ensure_columns(
+        conn,
+        "chart_snapshots",
+        {
+            "status": "TEXT NOT NULL DEFAULT 'ok'",
+            "error": "TEXT",
+            "html_bytes": "INTEGER",
+        },
+    )
 
 
 def upsert_chart(conn: sqlite3.Connection, chart: Mapping[str, str]) -> None:
@@ -179,10 +190,14 @@ def upsert_snapshot(
     snapshot_date: str,
     source_url: Optional[str] = None,
     fetched_at: Optional[str] = None,
+    status: str = "ok",
+    error: Optional[str] = None,
+    html_bytes: Optional[int] = None,
 ) -> str:
     """Insert or update a snapshot row; return snapshot_id.
 
     Caller should pass ISO-8601 strings for snapshot_date and fetched_at.
+    status should be 'ok' or 'failed'.
     """
 
     snapshot_id = _build_snapshot_id(chart_id, snapshot_date)
@@ -192,14 +207,20 @@ def upsert_snapshot(
         "snapshot_date": snapshot_date,
         "fetched_at": fetched_at or snapshot_date,
         "source_url": source_url,
+        "status": status,
+        "error": error,
+        "html_bytes": html_bytes,
     }
     conn.execute(
         """
-        INSERT INTO chart_snapshots (id, chart_id, snapshot_date, fetched_at, source_url)
-        VALUES (:id, :chart_id, :snapshot_date, :fetched_at, :source_url)
+        INSERT INTO chart_snapshots (id, chart_id, snapshot_date, fetched_at, source_url, status, error, html_bytes)
+        VALUES (:id, :chart_id, :snapshot_date, :fetched_at, :source_url, :status, :error, :html_bytes)
         ON CONFLICT(chart_id, snapshot_date) DO UPDATE SET
             fetched_at = excluded.fetched_at,
-            source_url = excluded.source_url
+            source_url = excluded.source_url,
+            status = excluded.status,
+            error = excluded.error,
+            html_bytes = excluded.html_bytes
         """,
         payload,
     )

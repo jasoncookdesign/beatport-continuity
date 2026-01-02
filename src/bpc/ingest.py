@@ -14,54 +14,135 @@ from .time_utils import week_bucket
 LOG = get_logger(__name__)
 
 
-def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_date: date) -> None:
-    """Ingest all tracked charts for a given snapshot date.
+def _save_debug_html(chart_id: str, snapshot_date: str, html: str) -> Path:
+    """Save HTML to debug directory for troubleshooting."""
+    debug_dir = load_paths().data / "debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    debug_path = debug_dir / f"{chart_id}_{snapshot_date}.html"
+    # Limit HTML size to avoid huge files
+    debug_path.write_text(html[:200_000], encoding="utf-8", errors="ignore")
+    return debug_path
 
-    Each chart is handled in its own transaction; failures roll back per chart.
+
+def _ingest_single_chart(
+    conn,
+    chart: Mapping[str, str],
+    snapshot_date: date,
+    snap_str: str,
+) -> None:
+    """Ingest a single chart for a given snapshot date.
+    
+    Handles failures gracefully by recording them in the database
+    and continuing execution instead of raising.
     """
-    if snapshot_date.weekday() != 0:
-        LOG.warning("Non-Monday snapshot_date received; bucketing applied")
-    snapshot_date = week_bucket(snapshot_date)
-    snap_str = snapshot_date.isoformat()
-
-    for chart in tracked_charts:
-        chart_id = chart["id"]
-        url = chart["url"]
+    chart_id = chart["id"]
+    url = chart["url"]
+    
+    try:
+        LOG.info("Fetching chart %s (%s) for snapshot %s", chart_id, url, snap_str)
+        html = fetch_chart_html_with_retry(url)
+        html_bytes = len(html.encode("utf-8", errors="ignore"))
+        fetched_at = datetime.utcnow().isoformat(timespec="seconds")
+        
+        LOG.info("Fetched chart %s (%d bytes)", chart_id, html_bytes)
+        
         try:
-            LOG.info("Fetching chart %s (%s) for snapshot %s", chart_id, url, snap_str)
-            html = fetch_chart_html_with_retry(url)
-
-            LOG.info("Fetched chart %s", chart_id)
-            try:
-                entries = parse_chart(html)
-            except Exception as parse_exc:
-                debug_dir = load_paths().data / "debug"
-                debug_dir.mkdir(parents=True, exist_ok=True)
-                debug_path = debug_dir / f"{chart_id}_{snap_str}.html"
-                debug_path.write_text(html[:200_000], encoding="utf-8", errors="ignore")
-                LOG.error(
-                    "Parse failure for chart %s (%s) snapshot %s; saved HTML to %s",
-                    chart_id,
-                    url,
-                    snap_str,
-                    debug_path,
-                )
-                raise parse_exc
-
-            # Handle unsupported hype charts gracefully
-            if len(entries) == 0 and "-hype-" in chart_id:
-                LOG.info(
-                    "Skipping unsupported hype chart %s (Beatport reports is_included_in_hype=false)",
-                    chart_id,
-                )
-                continue
-
-            LOG.info("Parsed %d entries for chart %s", len(entries), chart_id)
-            if len(entries) < 100:
-                LOG.warning("Parsed %d entries for chart %s (expected up to 100)", len(entries), chart_id)
-
+            entries = parse_chart(html)
+        except Exception as parse_exc:
+            # Save debug HTML for later troubleshooting
+            debug_path = _save_debug_html(chart_id, snap_str, html)
+            error_msg = f"{type(parse_exc).__name__}: {str(parse_exc)[:200]}"
+            
+            LOG.error(
+                "Parse failure for chart %s (%s) snapshot %s: %s; saved HTML to %s",
+                chart_id,
+                url,
+                snap_str,
+                error_msg,
+                debug_path,
+            )
+            
+            # Record failed snapshot in DB
             conn.execute("BEGIN")
+            try:
+                upsert_chart(
+                    conn,
+                    {
+                        "id": chart_id,
+                        "chart_type": chart["chart_type"],
+                        "genre_slug": chart["genre_slug"],
+                        "name": chart["name"],
+                    },
+                )
+                upsert_snapshot(
+                    conn,
+                    chart_id=chart_id,
+                    snapshot_date=snap_str,
+                    source_url=url,
+                    fetched_at=fetched_at,
+                    status="failed",
+                    error=error_msg,
+                    html_bytes=html_bytes,
+                )
+                conn.commit()
+                LOG.info("Recorded failed snapshot for chart %s", chart_id)
+            except Exception as db_exc:
+                conn.rollback()
+                LOG.exception("Failed to record failed snapshot for chart %s: %s", chart_id, db_exc)
+            
+            return  # Continue to next chart
 
+        # Handle empty results (valid but no data)
+        if len(entries) == 0:
+            # Save debug HTML
+            debug_path = _save_debug_html(chart_id, snap_str, html)
+            error_msg = "Empty results (count=0). Beatport may have disabled hype for this genre or served a landing page."
+            
+            LOG.warning(
+                "Empty results for chart %s (%s) snapshot %s; saved HTML to %s",
+                chart_id,
+                url,
+                snap_str,
+                debug_path,
+            )
+            
+            # Record as failed snapshot
+            conn.execute("BEGIN")
+            try:
+                upsert_chart(
+                    conn,
+                    {
+                        "id": chart_id,
+                        "chart_type": chart["chart_type"],
+                        "genre_slug": chart["genre_slug"],
+                        "name": chart["name"],
+                    },
+                )
+                upsert_snapshot(
+                    conn,
+                    chart_id=chart_id,
+                    snapshot_date=snap_str,
+                    source_url=url,
+                    fetched_at=fetched_at,
+                    status="failed",
+                    error=error_msg,
+                    html_bytes=html_bytes,
+                )
+                conn.commit()
+                LOG.info("Recorded empty results as failed snapshot for chart %s", chart_id)
+            except Exception as db_exc:
+                conn.rollback()
+                LOG.exception("Failed to record empty snapshot for chart %s: %s", chart_id, db_exc)
+            
+            return  # Continue to next chart
+
+        LOG.info("Parsed %d entries for chart %s", len(entries), chart_id)
+        if len(entries) < 100:
+            LOG.warning("Parsed %d entries for chart %s (expected up to 100)", len(entries), chart_id)
+
+        # Write successful snapshot with entries
+        conn.execute("BEGIN")
+        try:
             upsert_chart(
                 conn,
                 {
@@ -77,7 +158,10 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
                 chart_id=chart_id,
                 snapshot_date=snap_str,
                 source_url=url,
-                fetched_at=datetime.utcnow().isoformat(timespec="seconds"),
+                fetched_at=fetched_at,
+                status="ok",
+                error=None,
+                html_bytes=html_bytes,
             )
 
             conn.execute("DELETE FROM chart_entries WHERE snapshot_id = ?", (snapshot_id,))
@@ -98,10 +182,29 @@ def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_da
 
             conn.commit()
             LOG.info("Wrote snapshot %s with %d entries", snapshot_id, len(entries))
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                LOG.exception("Rollback failed for chart %s", chart_id)
-            LOG.exception("Failed to ingest chart %s; rolled back transaction", chart_id)
-            continue
+            
+        except Exception as db_exc:
+            conn.rollback()
+            LOG.exception("Database error writing snapshot for chart %s: %s", chart_id, db_exc)
+            return  # Continue to next chart
+            
+    except Exception as exc:
+        # Catch-all for unexpected errors (network failures, etc.)
+        LOG.exception("Unexpected error ingesting chart %s: %s", chart_id, exc)
+        # Don't try to write to DB here since we may not have html/fetched_at
+        return  # Continue to next chart
+
+
+def run_ingestion(conn, tracked_charts: Iterable[Mapping[str, str]], snapshot_date: date) -> None:
+    """Ingest all tracked charts for a given snapshot date.
+
+    Each chart is handled independently; failures are logged and recorded
+    but do not stop processing of remaining charts.
+    """
+    if snapshot_date.weekday() != 0:
+        LOG.warning("Non-Monday snapshot_date received; bucketing applied")
+    snapshot_date = week_bucket(snapshot_date)
+    snap_str = snapshot_date.isoformat()
+
+    for chart in tracked_charts:
+        _ingest_single_chart(conn, chart, snapshot_date, snap_str)

@@ -287,7 +287,33 @@ def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> 
     next_data = _find_next_data_json(soup)
     if not next_data:
         return []
-
+    # Check for explicit empty results (count=0) in __NEXT_DATA__
+    try:
+        props = next_data.get("props") or {}
+        page_props = props.get("pageProps") or {}
+        dehydrated = page_props.get("dehydratedState") or {}
+        queries = dehydrated.get("queries") or []
+        
+        for query in queries:
+            if not isinstance(query, dict):
+                continue
+            state = query.get("state") or {}
+            data = state.get("data") or {}
+            
+            # Check if this is an explicit "no results" response
+            if "count" in data and data["count"] == 0:
+                results = data.get("results", [])
+                if isinstance(results, list) and len(results) == 0:
+                    raise ValueError(
+                        f"Empty results in __NEXT_DATA__ (count=0, results=[]). "
+                        f"Beatport may have disabled hype for this genre or served a landing page."
+                    )
+    except ValueError:
+        # Re-raise ValueError for count=0 detection
+        raise
+    except Exception:
+        # Ignore other exceptions during empty check
+        pass
     # Beatport often nests as props.pageProps.pageProps; we’ll search there first,
     # but also fall back to searching the entire payload if needed.
     props = next_data.get("props") or {}
