@@ -10,6 +10,7 @@ from .config import TRACKED_CHARTS, load_paths
 from .db import get_conn, init_db
 from .ingest import run_ingestion
 from .compute import run_compute
+from .report import run_report
 from .logging_utils import get_logger
 from .time_utils import today_bucket
 
@@ -63,9 +64,18 @@ def handle_compute(args: argparse.Namespace) -> None:
     print(f"Compute complete for snapshot {snap_date}")
 
 
-def handle_report(_args: argparse.Namespace) -> None:
-    LOG.info("Rendering report (placeholder)")
-    print("TODO: report")
+def handle_report(args: argparse.Namespace) -> None:
+    paths = load_paths()
+    db_path = paths.db
+
+    conn = get_conn(str(db_path))
+    try:
+        init_db(conn)
+        output = run_report(conn, args.snapshot_date)
+    finally:
+        conn.close()
+
+    print(f"Report written to {output}")
 
 
 def handle_run_all(args: argparse.Namespace) -> None:
@@ -99,7 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparser = subparsers.add_parser(name, help=help_text)
         subparser.set_defaults(func=handler)
 
-        if name in {"ingest", "compute", "run-all"}:
+        if name in {"ingest", "compute", "report", "run-all"}:
             subparser.add_argument(
                 "--snapshot-date",
                 type=date.fromisoformat,

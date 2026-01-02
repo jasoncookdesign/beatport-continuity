@@ -32,12 +32,24 @@ jobs:
 
       - name: Commit changes
         run: |
+          mkdir -p data docs
+          echo "Workspace files:"
+          ls -la
+          echo "docs/:"
+          ls -la docs || true
+          echo "data/:"
+          ls -la data || true
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/beatport.sqlite docs/index.html
+
+          # Add directories (safe even if empty / missing specific files)
+          git add -A data docs
+
           if git diff --cached --quiet; then
             echo "No changes"
             exit 0
           fi
+
           git commit -m "Weekly Beatport continuity update"
           git push
