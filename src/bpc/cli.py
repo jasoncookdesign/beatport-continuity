@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from typing import Callable, Sequence
 
 from .config import load_paths
 from .db import get_conn, init_db
 from .logging_utils import get_logger
+from .time_utils import today_bucket
 
 LOG = get_logger(__name__)
 
@@ -24,9 +26,14 @@ def handle_init_db(_args: argparse.Namespace) -> None:
     print(f"Database initialized at {db_path}")
 
 
-def handle_ingest(_args: argparse.Namespace) -> None:
-    LOG.info("Ingesting weekly charts (placeholder)")
-    print("TODO: ingest")
+def _resolve_snapshot_date(args: argparse.Namespace)  -> date:
+    return args.snapshot_date or today_bucket()
+
+
+def handle_ingest(args: argparse.Namespace) -> None:
+    snap_date = _resolve_snapshot_date(args)
+    LOG.info("Ingesting weekly charts for snapshot %s (placeholder)", snap_date)
+    print(f"TODO: ingest (snapshot_date={snap_date})")
 
 
 def handle_compute(_args: argparse.Namespace) -> None:
@@ -69,6 +76,13 @@ def build_parser() -> argparse.ArgumentParser:
     for name, handler, help_text in subcommands:
         subparser = subparsers.add_parser(name, help=help_text)
         subparser.set_defaults(func=handler)
+
+        if name in {"ingest", "run-all"}:
+            subparser.add_argument(
+                "--snapshot-date",
+                type=date.fromisoformat,
+                help="ISO date (YYYY-MM-DD) for the weekly snapshot; defaults to current week bucket",
+            )
 
     return parser
 
