@@ -12,6 +12,7 @@ from .ingest import run_ingestion
 from .compute import run_compute
 from .report import run_report
 from .status import run_status
+from .diagnose import run_diagnose
 from .logging_utils import get_logger
 from .time_utils import today_bucket
 
@@ -104,6 +105,19 @@ def handle_status(_args: argparse.Namespace) -> None:
         conn.close()
 
 
+def handle_diagnose(args: argparse.Namespace) -> int:
+    paths = load_paths()
+    paths.data.mkdir(parents=True, exist_ok=True)
+    db_path = paths.db
+
+    conn = get_conn(str(db_path))
+    try:
+        init_db(conn)
+        return run_diagnose(conn, args.snapshot_date)
+    finally:
+        conn.close()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bpc",
@@ -118,13 +132,14 @@ def build_parser() -> argparse.ArgumentParser:
         ("report", handle_report, "Render HTML report"),
         ("run-all", handle_run_all, "Run init, ingest, compute, and report"),
         ("status", handle_status, "Show pipeline status"),
+        ("diagnose", handle_diagnose, "Fetch/parse charts and write local debug artifacts on failure"),
     ]
 
     for name, handler, help_text in subcommands:
         subparser = subparsers.add_parser(name, help=help_text)
         subparser.set_defaults(func=handler)
 
-        if name in {"ingest", "compute", "report", "run-all"}:
+        if name in {"ingest", "compute", "report", "run-all", "diagnose"}:
             subparser.add_argument(
                 "--snapshot-date",
                 type=date.fromisoformat,
@@ -137,8 +152,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    args.func(args)
-    return 0
+    result = args.func(args)
+    return result if isinstance(result, int) else 0
 
 
 if __name__ == "__main__":
