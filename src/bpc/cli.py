@@ -6,8 +6,10 @@ import sys
 from datetime import date
 from typing import Callable, Sequence
 
-from .config import load_paths
+from .config import TRACKED_CHARTS, load_paths
 from .db import get_conn, init_db
+from .ingest import run_ingestion
+from .compute import run_compute
 from .logging_utils import get_logger
 from .time_utils import today_bucket
 
@@ -26,19 +28,39 @@ def handle_init_db(_args: argparse.Namespace) -> None:
     print(f"Database initialized at {db_path}")
 
 
-def _resolve_snapshot_date(args: argparse.Namespace)  -> date:
+def _resolve_snapshot_date(args: argparse.Namespace) -> date:
     return args.snapshot_date or today_bucket()
 
 
 def handle_ingest(args: argparse.Namespace) -> None:
     snap_date = _resolve_snapshot_date(args)
-    LOG.info("Ingesting weekly charts for snapshot %s (placeholder)", snap_date)
-    print(f"TODO: ingest (snapshot_date={snap_date})")
+    paths = load_paths()
+    paths.data.mkdir(parents=True, exist_ok=True)
+    db_path = paths.db
+    conn = get_conn(str(db_path))
+    try:
+        init_db(conn)
+        run_ingestion(conn, TRACKED_CHARTS, snap_date)
+    finally:
+        conn.close()
+
+    print(f"Ingest complete for snapshot {snap_date}")
 
 
-def handle_compute(_args: argparse.Namespace) -> None:
-    LOG.info("Computing durability metrics (placeholder)")
-    print("TODO: compute")
+def handle_compute(args: argparse.Namespace) -> None:
+    snap_date = _resolve_snapshot_date(args)
+    paths = load_paths()
+    paths.data.mkdir(parents=True, exist_ok=True)
+    db_path = paths.db
+
+    conn = get_conn(str(db_path))
+    try:
+        init_db(conn)
+        run_compute(conn, snap_date)
+    finally:
+        conn.close()
+
+    print(f"Compute complete for snapshot {snap_date}")
 
 
 def handle_report(_args: argparse.Namespace) -> None:
@@ -77,7 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparser = subparsers.add_parser(name, help=help_text)
         subparser.set_defaults(func=handler)
 
-        if name in {"ingest", "run-all"}:
+        if name in {"ingest", "compute", "run-all"}:
             subparser.add_argument(
                 "--snapshot-date",
                 type=date.fromisoformat,
