@@ -5,14 +5,23 @@ import argparse
 import sys
 from typing import Callable, Sequence
 
+from .config import load_paths
+from .db import get_conn, init_db
 from .logging_utils import get_logger
 
 LOG = get_logger(__name__)
 
 
 def handle_init_db(_args: argparse.Namespace) -> None:
-    LOG.info("Initializing database scaffold (placeholder)")
-    print("TODO: init-db")
+    paths = load_paths()
+    paths.data.mkdir(parents=True, exist_ok=True)
+    db_path = paths.db
+
+    LOG.info("Initializing database at %s", db_path)
+    conn = get_conn(str(db_path))
+    init_db(conn)
+    conn.close()
+    print(f"Database initialized at {db_path}")
 
 
 def handle_ingest(_args: argparse.Namespace) -> None:
