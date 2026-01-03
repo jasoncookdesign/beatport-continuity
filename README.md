@@ -8,10 +8,10 @@ The goal is not prediction, recommendation, or taste judgment. It’s to simulat
 
 This project is intentionally:
 
-* deterministic
-* transparent
-* explainable
-* low-maintenance once running
+* deterministic  
+* transparent  
+* explainable  
+* low-maintenance once running  
 
 It is built for personal insight, not as a commercial product.
 
@@ -21,39 +21,86 @@ It is built for personal insight, not as a commercial product.
 
 ### Ingestion
 
-* Fetches Beatport charts weekly (Top 100, genre Top 100s, Hype 100)
-* Normalizes snapshot dates to weekly buckets
+* Fetches Beatport charts weekly (Top 100, genre Top 100s, and Hype 100s)
+* Normalizes snapshot dates to weekly buckets (most recent Monday)
 * Stores immutable snapshots in SQLite
+* **Resilient to partial failure**:
+  * If a chart fails to parse or returns empty results, the run continues
+  * Failures are logged and recorded per chart/week
+  * Unrelated charts are never rolled back
 * Includes local diagnostics to validate parsing and catch breakage early
+
+This ensures continuity is preserved even when Beatport pages are inconsistent.
+
+---
 
 ### Metrics
 
-Computed **per chart**, not globally:
+Computed **per chart**, never globally:
 
 * Weeks on chart
 * First / last seen
-* Streaks and re-entries
-* Week-over-week movement
-* Momentum and volatility windows
+* Current streak length
+* Re-entry count
+* Week-over-week rank movement
+* Momentum and rank volatility windows
 * Composite durability score
-* Qualitative buckets (Anchor / Climber / Fader / Spike)
+* Qualitative buckets:
+  * **Anchor** — long-lived, stable tracks
+  * **Climber** — steadily gaining adoption
+  * **Fader** — decaying relevance
+  * **Spike** — short-lived hype appearances
 
-All metrics are persisted and inspectable—nothing is a black box.
+All metrics are persisted and inspectable—nothing is a black box.  
+Buckets become more accurate over time as historical data accumulates.
+
+---
 
 ### Reporting
 
-* Renders a static HTML report (`docs/index.html`)
-* Ranks tracks by durability score per chart
-* Displays raw metrics alongside qualitative buckets
-* Separates track title, artists, remixers, and mix name cleanly
-* Designed to be served via GitHub Pages or opened locally
+* Renders a fully static HTML report:
+  * `docs/index.html` — landing page
+  * `docs/charts/*.html` — one page per chart
+* Landing page shows:
+  * Tracked charts
+  * Top durable tracks per chart (summary view)
+* Individual chart pages include:
+  * Ranked tables by durability score
+  * Clear separation of track title, mix, artists, and remixers
+  * Qualitative bucket labels
+  * Hover tooltips explaining every metric column
+* Client-side interactivity (no backend):
+  * Text search (track / artist / remixer)
+  * Toggle filters (Anchors, Climbers, etc.)
+  * Option to hide dim rows (tracks no longer on chart)
+
+Designed to be opened locally or served via GitHub Pages.
+
+---
+
+### Aggregate views (explicit and cautious)
+
+In addition to per-chart analysis, the report includes an **Across All Charts** view that:
+
+* Surfaces tracks appearing in multiple charts
+* Highlights durability across contexts
+* Uses an explicitly documented aggregation method
+
+This page is deliberately conservative:
+* No hidden weighting
+* No “global taste” claims
+* Purely a lens for cross-chart persistence
+
+---
 
 ### Automation
 
 * Weekly GitHub Actions workflow:
-
-  * ingest → compute → report
-  * commits updated database and report
+  * `ingest → compute → report`
+  * Commits updated database and HTML output
+* Safe by default:
+  * Partial ingestion failures do not block the run
+  * Status command surfaces missing or failed charts cleanly
 * No external services required
 * No runtime dependencies beyond Python + SQLite
 
@@ -74,7 +121,7 @@ All metrics are persisted and inspectable—nothing is a black box.
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
-   ```
+````
 
 2. Install in editable mode:
 
@@ -98,13 +145,14 @@ python -m bpc.cli --help
   Initialize or migrate the local SQLite database.
 
 * `ingest [--snapshot-date YYYY-MM-DD]`
-  Fetch weekly charts and store snapshots (date is bucketed to week start).
+  Fetch weekly charts and store snapshots.
+  If no date is provided, defaults to the most recent weekly bucket.
 
 * `compute [--snapshot-date YYYY-MM-DD]`
   Compute durability metrics per chart up to the given week.
 
 * `report [--snapshot-date YYYY-MM-DD]`
-  Render the static HTML report to `docs/index.html`.
+  Render static HTML pages to `docs/`.
 
 * `run-all [--snapshot-date YYYY-MM-DD]`
   Run `init-db → ingest → compute → report`.
@@ -113,7 +161,8 @@ python -m bpc.cli --help
   Print a concise overview of:
 
   * tracked charts
-  * latest snapshots
+  * latest successful snapshots
+  * missing or failed chart/weeks
   * metric coverage
   * report location
 
@@ -133,7 +182,7 @@ python -m bpc.cli run-all
 ```
 src/bpc/
   cli.py          # CLI entry point
-  ingest.py       # Chart ingestion
+  ingest.py       # Chart ingestion (resilient)
   compute.py      # Metric computation
   report.py       # HTML report generation
   diagnose.py     # Local parsing diagnostics
@@ -142,16 +191,21 @@ src/bpc/
   db.py           # SQLite schema + helpers
 
 templates/
-  report.html.j2  # Jinja2 HTML template
+  report.html.j2
+  chart.html.j2   # Per-chart pages
+  aggregate.html.j2
 
 data/
   beatport.sqlite # SQLite database (tracked)
+  debug/          # Saved HTML on parse failure
 
 docs/
-  index.html      # Generated report (tracked)
+  index.html
+  charts/
+  aggregate.html
 
 .github/workflows/
-  weekly.yml      # Scheduled weekly run
+  weekly.yml
 ```
 
 ---
@@ -177,5 +231,5 @@ It simply:
 
 **Phase 1 complete.**
 
-The system is stable, automated, and already useful.
-Future changes, if any, will be driven by observed behavior over time—not feature ambition.
+The system is stable, resilient, automated, and already useful.
+Future changes will be driven by observed behavior over time—not feature ambition.
