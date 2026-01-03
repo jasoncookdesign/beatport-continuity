@@ -24,9 +24,10 @@
     .muted { color: var(--muted); }
     .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
-    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+    table { border-collapse: collapse; width: auto; min-width: 100%; table-layout: auto; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; }
     tr:nth-child(even) { background: var(--table-stripe); }
     tr.dim td { color: var(--muted); }
     a { color: var(--accent); text-decoration: none; }
@@ -50,6 +51,20 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+    
+    /* Filter controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 1rem; }
+    .controls input[type="search"] { flex: 1 1 240px; min-width: 180px; padding: 0.5rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.95rem; font-family: inherit; }
+    .controls input[type="search"]::placeholder { color: var(--muted); }
+    .controls input[type="search"]:focus { outline: none; border-color: var(--accent); }
+    .bucket-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .bucket-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .bucket-filters label:hover { background: rgba(255,255,255,0.1); }
+    .bucket-filters input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .hide-dim-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .hide-dim-toggle:hover { background: rgba(255,255,255,0.1); }
+    .hide-dim-toggle input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .results-count { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
   /* Tooltip header wrapper */
 .tooltip-header{
   position: relative;
@@ -121,7 +136,7 @@
   <header>
     <h1>Beatport Continuity</h1>
     <div class="header-meta">
-      <span class="muted">Generated 2026-01-02T23:23:58</span>
+      <span class="muted">Generated 2026-01-03T00:09:00</span>
     </div>
   </header>
   <div class="charts card-grid">

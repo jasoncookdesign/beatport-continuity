@@ -24,9 +24,10 @@
     .muted { color: var(--muted); }
     .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
-    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+    table { border-collapse: collapse; width: auto; min-width: 100%; table-layout: auto; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; }
     tr:nth-child(even) { background: var(--table-stripe); }
     tr.dim td { color: var(--muted); }
     a { color: var(--accent); text-decoration: none; }
@@ -50,6 +51,20 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+    
+    /* Filter controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 1rem; }
+    .controls input[type="search"] { flex: 1 1 240px; min-width: 180px; padding: 0.5rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.95rem; font-family: inherit; }
+    .controls input[type="search"]::placeholder { color: var(--muted); }
+    .controls input[type="search"]:focus { outline: none; border-color: var(--accent); }
+    .bucket-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .bucket-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .bucket-filters label:hover { background: rgba(255,255,255,0.1); }
+    .bucket-filters input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .hide-dim-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .hide-dim-toggle:hover { background: rgba(255,255,255,0.1); }
+    .hide-dim-toggle input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .results-count { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
   /* Tooltip header wrapper */
 .tooltip-header{
   position: relative;
@@ -127,11 +142,30 @@
       </div>
       <div class="badge">Top 100 tracks</div>
     </div>
+    
+    <div class="controls">
+      <input type="search" id="filter-q" placeholder="Search title / artists / remixers / mix…">
+      <div class="bucket-filters">
+        <label><input type="checkbox" id="filter-anchor" value="Anchor" checked> Anchor</label>
+        <label><input type="checkbox" id="filter-climber" value="Climber" checked> Climber</label>
+        <label><input type="checkbox" id="filter-fader" value="Fader" checked> Fader</label>
+        <label><input type="checkbox" id="filter-spike" value="Spike" checked> Spike</label>
+        <label><input type="checkbox" id="filter-other" value="—" checked> Other</label>
+      </div>
+      <label class="hide-dim-toggle"><input type="checkbox" id="hide-dim"> Hide dim rows</label>
+      <div class="results-count" id="results-count"></div>
+    </div>
+    
+    <div class="table-wrapper">
     <table>
       <thead>
         <tr>
           <th class="tooltip-header" data-tooltip="Rank in this table\nPosition after sorting tracks by Durability Score for this chart and week.">#</th>
           <th class="tooltip-header" data-tooltip="Durability score\nComposite score that emphasizes how long and how consistently a track has appeared on this chart.\n\nBuilt from:\n• weeks present\n• stability (low volatility)\n• momentum (secondary)\n• re-entries\n• chart context\n\nHigher score = more durable over time.\nNot a popularity or quality judgment.">Score</th>
+          <th class="tooltip-header" data-tooltip="Track title\nCanonical track name as listed on Beatport.\n\nLinks to the Beatport track page.">Track</th>
+          <th class="tooltip-header" data-tooltip="Mix / version\nSpecific mix or version of the track\n(e.g. Extended Mix, Original Mix).\n\nSeparated to avoid duplication in the title.">Mix</th>
+          <th class="tooltip-header" data-tooltip="Primary artists\nMain credited artists for the track.">Artists</th>
+          <th class="tooltip-header" data-tooltip="Remix artists\nArtists credited for remixing this version, if any.\n\nBlank means the track is not a remix.">Remixers</th>
           <th class="tooltip-header" data-tooltip="Durability pattern\nQualitative classification based on observed behavior:\n\n• Anchor — long-lasting, stable presence\n• Climber — short history, improving position\n• Fader — long presence, currently declining\n• Spike — brief, volatile peak\n\nDerived from raw metrics; no single metric decides this.">Type</th>
           <th class="tooltip-header" data-tooltip="Current rank\nTrack's most recent chart position for this week.\nLower numbers are better.\n\nBlank means the track is not present this week.">Cur</th>
           <th class="tooltip-header" data-tooltip="Week-over-week movement\nChange in rank compared to the previous week.\n\n• Positive = moved up\n• Negative = moved down\n• Zero = unchanged\n\nSmaller movements matter more than large one-week jumps.">WoW</th>
@@ -140,16 +174,16 @@
           <th class="tooltip-header" data-tooltip="Re-entries\nNumber of times the track exited and later re-entered the chart.\n\nRe-entries often indicate rediscovery or long-term DJ utility.">Re</th>
           <th class="tooltip-header" data-tooltip="Peak rank\nHighest (best) chart position the track has ever reached.\n\nUsed for context only — peak alone does not imply durability.">Best</th>
           <th class="tooltip-header" data-tooltip="Average rank\nAverage chart position across all appearances.\n\nRepresents where the track typically lives, not just its peak.">Avg</th>
-          <th class="tooltip-header" data-tooltip="Track title\nCanonical track name as listed on Beatport.\n\nLinks to the Beatport track page.">Track</th>
-          <th class="tooltip-header" data-tooltip="Mix / version\nSpecific mix or version of the track\n(e.g. Extended Mix, Original Mix).\n\nSeparated to avoid duplication in the title.">Mix</th>
-          <th class="tooltip-header" data-tooltip="Primary artists\nMain credited artists for the track.">Artists</th>
-          <th class="tooltip-header" data-tooltip="Remix artists\nArtists credited for remixing this version, if any.\n\nBlank means the track is not a remix.">Remixers</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="self r3b00t davi  original mix">
           <td class="num">1</td>
           <td class="score">1.0000</td>
+          <td><a href="https://www.beatport.com/track/self-r3b00t/22385734" target="_blank" rel="noopener noreferrer">Self R3B00T</a></td>
+          <td class="num">Original Mix</td>
+          <td>DAVI</td>
+          <td></td>
           <td>
               —
           </td>
@@ -161,14 +195,14 @@
           <td class="num">0</td>
           <td class="num">1</td>
           <td class="num">1.0</td>
-          <td><a href="https://www.beatport.com/track/self-r3b00t/22385734" target="_blank" rel="noopener noreferrer">Self R3B00T</a></td>
-          <td class="num">Original Mix</td>
-          <td>DAVI</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="scarlet sails proff, m.o.s.  extended">
           <td class="num">2</td>
           <td class="score">0.9965</td>
+          <td><a href="https://www.beatport.com/track/scarlet-sails/22771310" target="_blank" rel="noopener noreferrer">Scarlet Sails</a></td>
+          <td class="num">Extended</td>
+          <td>PROFF, M.O.S.</td>
+          <td></td>
           <td>
               —
           </td>
@@ -180,14 +214,14 @@
           <td class="num">0</td>
           <td class="num">2</td>
           <td class="num">2.0</td>
-          <td><a href="https://www.beatport.com/track/scarlet-sails/22771310" target="_blank" rel="noopener noreferrer">Scarlet Sails</a></td>
-          <td class="num">Extended</td>
-          <td>PROFF, M.O.S.</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="ramses sebastien leger, lost miracle  extended mix">
           <td class="num">3</td>
           <td class="score">0.9929</td>
+          <td><a href="https://www.beatport.com/track/ramses/22431057" target="_blank" rel="noopener noreferrer">Ramses</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Sebastien Leger, Lost Miracle</td>
+          <td></td>
           <td>
               —
           </td>
@@ -199,14 +233,14 @@
           <td class="num">0</td>
           <td class="num">3</td>
           <td class="num">3.0</td>
-          <td><a href="https://www.beatport.com/track/ramses/22431057" target="_blank" rel="noopener noreferrer">Ramses</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Sebastien Leger, Lost Miracle</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="don't this fairtone  original mix">
           <td class="num">4</td>
           <td class="score">0.9894</td>
+          <td><a href="https://www.beatport.com/track/dont-this/18983652" target="_blank" rel="noopener noreferrer">Don't This</a></td>
+          <td class="num">Original Mix</td>
+          <td>Fairtone</td>
+          <td></td>
           <td>
               —
           </td>
@@ -218,14 +252,14 @@
           <td class="num">0</td>
           <td class="num">4</td>
           <td class="num">4.0</td>
-          <td><a href="https://www.beatport.com/track/dont-this/18983652" target="_blank" rel="noopener noreferrer">Don't This</a></td>
-          <td class="num">Original Mix</td>
-          <td>Fairtone</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="steady move khen  original mix">
           <td class="num">5</td>
           <td class="score">0.9859</td>
+          <td><a href="https://www.beatport.com/track/steady-move/22485716" target="_blank" rel="noopener noreferrer">Steady Move</a></td>
+          <td class="num">Original Mix</td>
+          <td>Khen</td>
+          <td></td>
           <td>
               —
           </td>
@@ -237,14 +271,14 @@
           <td class="num">0</td>
           <td class="num">5</td>
           <td class="num">5.0</td>
-          <td><a href="https://www.beatport.com/track/steady-move/22485716" target="_blank" rel="noopener noreferrer">Steady Move</a></td>
-          <td class="num">Original Mix</td>
-          <td>Khen</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="ash & ember lee burridge, lost desert  extended mix">
           <td class="num">6</td>
           <td class="score">0.9823</td>
+          <td><a href="https://www.beatport.com/track/ash-ember/22455284" target="_blank" rel="noopener noreferrer">Ash & Ember</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Lee Burridge, Lost Desert</td>
+          <td></td>
           <td>
               —
           </td>
@@ -256,14 +290,14 @@
           <td class="num">0</td>
           <td class="num">6</td>
           <td class="num">6.0</td>
-          <td><a href="https://www.beatport.com/track/ash-ember/22455284" target="_blank" rel="noopener noreferrer">Ash & Ember</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Lee Burridge, Lost Desert</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="not like you dsf  2025 organic extended mix">
           <td class="num">7</td>
           <td class="score">0.9788</td>
+          <td><a href="https://www.beatport.com/track/not-like-you/22394409" target="_blank" rel="noopener noreferrer">Not Like You</a></td>
+          <td class="num">2025 Organic Extended Mix</td>
+          <td>DSF</td>
+          <td></td>
           <td>
               —
           </td>
@@ -275,14 +309,14 @@
           <td class="num">0</td>
           <td class="num">7</td>
           <td class="num">7.0</td>
-          <td><a href="https://www.beatport.com/track/not-like-you/22394409" target="_blank" rel="noopener noreferrer">Not Like You</a></td>
-          <td class="num">2025 Organic Extended Mix</td>
-          <td>DSF</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="doda khen  original mix">
           <td class="num">8</td>
           <td class="score">0.9753</td>
+          <td><a href="https://www.beatport.com/track/doda/22485717" target="_blank" rel="noopener noreferrer">Doda</a></td>
+          <td class="num">Original Mix</td>
+          <td>Khen</td>
+          <td></td>
           <td>
               —
           </td>
@@ -294,14 +328,14 @@
           <td class="num">0</td>
           <td class="num">8</td>
           <td class="num">8.0</td>
-          <td><a href="https://www.beatport.com/track/doda/22485717" target="_blank" rel="noopener noreferrer">Doda</a></td>
-          <td class="num">Original Mix</td>
-          <td>Khen</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="sweep sebastien leger, lost miracle  extended mix">
           <td class="num">9</td>
           <td class="score">0.9717</td>
+          <td><a href="https://www.beatport.com/track/sweep/22375510" target="_blank" rel="noopener noreferrer">Sweep</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Sebastien Leger, Lost Miracle</td>
+          <td></td>
           <td>
               —
           </td>
@@ -313,14 +347,14 @@
           <td class="num">0</td>
           <td class="num">9</td>
           <td class="num">9.0</td>
-          <td><a href="https://www.beatport.com/track/sweep/22375510" target="_blank" rel="noopener noreferrer">Sweep</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Sebastien Leger, Lost Miracle</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="tolika m.o.s.  extended">
           <td class="num">10</td>
           <td class="score">0.9682</td>
+          <td><a href="https://www.beatport.com/track/tolika/22771311" target="_blank" rel="noopener noreferrer">Tolika</a></td>
+          <td class="num">Extended</td>
+          <td>M.O.S.</td>
+          <td></td>
           <td>
               —
           </td>
@@ -332,14 +366,14 @@
           <td class="num">0</td>
           <td class="num">10</td>
           <td class="num">10.0</td>
-          <td><a href="https://www.beatport.com/track/tolika/22771311" target="_blank" rel="noopener noreferrer">Tolika</a></td>
-          <td class="num">Extended</td>
-          <td>M.O.S.</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="desert pearl nortio  original mix">
           <td class="num">11</td>
           <td class="score">0.9646</td>
+          <td><a href="https://www.beatport.com/track/desert-pearl/22480679" target="_blank" rel="noopener noreferrer">Desert Pearl</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nortio</td>
+          <td></td>
           <td>
               —
           </td>
@@ -351,14 +385,14 @@
           <td class="num">0</td>
           <td class="num">11</td>
           <td class="num">11.0</td>
-          <td><a href="https://www.beatport.com/track/desert-pearl/22480679" target="_blank" rel="noopener noreferrer">Desert Pearl</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nortio</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="sunrise nathan katz, anonimat  extended mix">
           <td class="num">12</td>
           <td class="score">0.9611</td>
+          <td><a href="https://www.beatport.com/track/sunrise/21898516" target="_blank" rel="noopener noreferrer">Sunrise</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Nathan Katz, Anonimat</td>
+          <td></td>
           <td>
               —
           </td>
@@ -370,14 +404,14 @@
           <td class="num">0</td>
           <td class="num">12</td>
           <td class="num">12.0</td>
-          <td><a href="https://www.beatport.com/track/sunrise/21898516" target="_blank" rel="noopener noreferrer">Sunrise</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Nathan Katz, Anonimat</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="andi soul engineers  extended mix">
           <td class="num">13</td>
           <td class="score">0.9576</td>
+          <td><a href="https://www.beatport.com/track/andi/22739133" target="_blank" rel="noopener noreferrer">Andi</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Soul Engineers</td>
+          <td></td>
           <td>
               —
           </td>
@@ -389,14 +423,14 @@
           <td class="num">0</td>
           <td class="num">13</td>
           <td class="num">13.0</td>
-          <td><a href="https://www.beatport.com/track/andi/22739133" target="_blank" rel="noopener noreferrer">Andi</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Soul Engineers</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="sunset people julius strieder  extended mix">
           <td class="num">14</td>
           <td class="score">0.9540</td>
+          <td><a href="https://www.beatport.com/track/sunset-people/22840632" target="_blank" rel="noopener noreferrer">Sunset People</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Julius Strieder</td>
+          <td></td>
           <td>
               —
           </td>
@@ -408,14 +442,14 @@
           <td class="num">0</td>
           <td class="num">14</td>
           <td class="num">14.0</td>
-          <td><a href="https://www.beatport.com/track/sunset-people/22840632" target="_blank" rel="noopener noreferrer">Sunset People</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Julius Strieder</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="mantra evren furtuna  extended mix">
           <td class="num">15</td>
           <td class="score">0.9505</td>
+          <td><a href="https://www.beatport.com/track/mantra/22949141" target="_blank" rel="noopener noreferrer">Mantra</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Evren Furtuna</td>
+          <td></td>
           <td>
               —
           </td>
@@ -427,14 +461,14 @@
           <td class="num">0</td>
           <td class="num">15</td>
           <td class="num">15.0</td>
-          <td><a href="https://www.beatport.com/track/mantra/22949141" target="_blank" rel="noopener noreferrer">Mantra</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Evren Furtuna</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="greece 2000 three drives, three drives on a vinyl, newman (i love)  extended mix">
           <td class="num">16</td>
           <td class="score">0.9470</td>
+          <td><a href="https://www.beatport.com/track/greece-2000/20811415" target="_blank" rel="noopener noreferrer">Greece 2000</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Three Drives, Three Drives On A Vinyl, Newman (I Love)</td>
+          <td></td>
           <td>
               —
           </td>
@@ -446,14 +480,14 @@
           <td class="num">0</td>
           <td class="num">16</td>
           <td class="num">16.0</td>
-          <td><a href="https://www.beatport.com/track/greece-2000/20811415" target="_blank" rel="noopener noreferrer">Greece 2000</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Three Drives, Three Drives On A Vinyl, Newman (I Love)</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="soulplay semsei  original mix">
           <td class="num">17</td>
           <td class="score">0.9434</td>
+          <td><a href="https://www.beatport.com/track/soulplay/22405154" target="_blank" rel="noopener noreferrer">Soulplay</a></td>
+          <td class="num">Original Mix</td>
+          <td>Semsei</td>
+          <td></td>
           <td>
               —
           </td>
@@ -465,14 +499,14 @@
           <td class="num">0</td>
           <td class="num">17</td>
           <td class="num">17.0</td>
-          <td><a href="https://www.beatport.com/track/soulplay/22405154" target="_blank" rel="noopener noreferrer">Soulplay</a></td>
-          <td class="num">Original Mix</td>
-          <td>Semsei</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="heaven's gate rodrigo pochelu, fefo carfagna  original mix">
           <td class="num">18</td>
           <td class="score">0.9399</td>
+          <td><a href="https://www.beatport.com/track/heavens-gate/22461183" target="_blank" rel="noopener noreferrer">Heaven's Gate</a></td>
+          <td class="num">Original Mix</td>
+          <td>Rodrigo Pochelu, Fefo Carfagna</td>
+          <td></td>
           <td>
               —
           </td>
@@ -484,14 +518,14 @@
           <td class="num">0</td>
           <td class="num">18</td>
           <td class="num">18.0</td>
-          <td><a href="https://www.beatport.com/track/heavens-gate/22461183" target="_blank" rel="noopener noreferrer">Heaven's Gate</a></td>
-          <td class="num">Original Mix</td>
-          <td>Rodrigo Pochelu, Fefo Carfagna</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="american dream jakatta proff proff extended interpretation">
           <td class="num">19</td>
           <td class="score">0.9364</td>
+          <td><a href="https://www.beatport.com/track/american-dream/19333128" target="_blank" rel="noopener noreferrer">American Dream</a></td>
+          <td class="num">PROFF Extended Interpretation</td>
+          <td>Jakatta</td>
+          <td>PROFF</td>
           <td>
               —
           </td>
@@ -503,14 +537,14 @@
           <td class="num">0</td>
           <td class="num">19</td>
           <td class="num">19.0</td>
-          <td><a href="https://www.beatport.com/track/american-dream/19333128" target="_blank" rel="noopener noreferrer">American Dream</a></td>
-          <td class="num">PROFF Extended Interpretation</td>
-          <td>Jakatta</td>
-          <td>PROFF</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="soleil kora (ca), madota  original mix">
           <td class="num">20</td>
           <td class="score">0.9328</td>
+          <td><a href="https://www.beatport.com/track/soleil/22788492" target="_blank" rel="noopener noreferrer">Soleil</a></td>
+          <td class="num">Original Mix</td>
+          <td>Kora (CA), Madota</td>
+          <td></td>
           <td>
               —
           </td>
@@ -522,14 +556,14 @@
           <td class="num">0</td>
           <td class="num">20</td>
           <td class="num">20.0</td>
-          <td><a href="https://www.beatport.com/track/soleil/22788492" target="_blank" rel="noopener noreferrer">Soleil</a></td>
-          <td class="num">Original Mix</td>
-          <td>Kora (CA), Madota</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="ancient worlds raidho  original mix">
           <td class="num">21</td>
           <td class="score">0.9293</td>
+          <td><a href="https://www.beatport.com/track/ancient-worlds/22771076" target="_blank" rel="noopener noreferrer">Ancient Worlds</a></td>
+          <td class="num">Original Mix</td>
+          <td>Raidho</td>
+          <td></td>
           <td>
               —
           </td>
@@ -541,14 +575,14 @@
           <td class="num">0</td>
           <td class="num">21</td>
           <td class="num">21.0</td>
-          <td><a href="https://www.beatport.com/track/ancient-worlds/22771076" target="_blank" rel="noopener noreferrer">Ancient Worlds</a></td>
-          <td class="num">Original Mix</td>
-          <td>Raidho</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="teahupoo nora en pure  extended mix">
           <td class="num">22</td>
           <td class="score">0.9258</td>
+          <td><a href="https://www.beatport.com/track/teahupoo/21322628" target="_blank" rel="noopener noreferrer">Teahupoo</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Nora En Pure</td>
+          <td></td>
           <td>
               —
           </td>
@@ -560,14 +594,14 @@
           <td class="num">0</td>
           <td class="num">22</td>
           <td class="num">22.0</td>
-          <td><a href="https://www.beatport.com/track/teahupoo/21322628" target="_blank" rel="noopener noreferrer">Teahupoo</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Nora En Pure</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="la vie a 2 manu chao, demayä  demaya extended remix">
           <td class="num">23</td>
           <td class="score">0.9222</td>
+          <td><a href="https://www.beatport.com/track/la-vie-a-2/22839314" target="_blank" rel="noopener noreferrer">La vie a 2</a></td>
+          <td class="num">Demaya extended remix</td>
+          <td>Manu Chao, Demayä</td>
+          <td></td>
           <td>
               —
           </td>
@@ -579,14 +613,14 @@
           <td class="num">0</td>
           <td class="num">23</td>
           <td class="num">23.0</td>
-          <td><a href="https://www.beatport.com/track/la-vie-a-2/22839314" target="_blank" rel="noopener noreferrer">La vie a 2</a></td>
-          <td class="num">Demaya extended remix</td>
-          <td>Manu Chao, Demayä</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="glade ramiro drisdale  original mix">
           <td class="num">24</td>
           <td class="score">0.9187</td>
+          <td><a href="https://www.beatport.com/track/glade/22868830" target="_blank" rel="noopener noreferrer">Glade</a></td>
+          <td class="num">Original Mix</td>
+          <td>Ramiro Drisdale</td>
+          <td></td>
           <td>
               —
           </td>
@@ -598,14 +632,14 @@
           <td class="num">0</td>
           <td class="num">24</td>
           <td class="num">24.0</td>
-          <td><a href="https://www.beatport.com/track/glade/22868830" target="_blank" rel="noopener noreferrer">Glade</a></td>
-          <td class="num">Original Mix</td>
-          <td>Ramiro Drisdale</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="worlds apart shingo nakamura, warung proff proff extended remix">
           <td class="num">25</td>
           <td class="score">0.9152</td>
+          <td><a href="https://www.beatport.com/track/worlds-apart/22006647" target="_blank" rel="noopener noreferrer">Worlds Apart</a></td>
+          <td class="num">PROFF Extended Remix</td>
+          <td>Shingo Nakamura, Warung</td>
+          <td>PROFF</td>
           <td>
               —
           </td>
@@ -617,14 +651,14 @@
           <td class="num">0</td>
           <td class="num">25</td>
           <td class="num">25.0</td>
-          <td><a href="https://www.beatport.com/track/worlds-apart/22006647" target="_blank" rel="noopener noreferrer">Worlds Apart</a></td>
-          <td class="num">PROFF Extended Remix</td>
-          <td>Shingo Nakamura, Warung</td>
-          <td>PROFF</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="supernova emi galvan  original mix">
           <td class="num">26</td>
           <td class="score">0.9116</td>
+          <td><a href="https://www.beatport.com/track/supernova/20510113" target="_blank" rel="noopener noreferrer">Supernova</a></td>
+          <td class="num">Original Mix</td>
+          <td>Emi Galvan</td>
+          <td></td>
           <td>
               —
           </td>
@@ -636,14 +670,14 @@
           <td class="num">0</td>
           <td class="num">26</td>
           <td class="num">26.0</td>
-          <td><a href="https://www.beatport.com/track/supernova/20510113" target="_blank" rel="noopener noreferrer">Supernova</a></td>
-          <td class="num">Original Mix</td>
-          <td>Emi Galvan</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="mi hogar kora (ca), madota  original mix">
           <td class="num">27</td>
           <td class="score">0.9081</td>
+          <td><a href="https://www.beatport.com/track/mi-hogar/22788491" target="_blank" rel="noopener noreferrer">Mi Hogar</a></td>
+          <td class="num">Original Mix</td>
+          <td>Kora (CA), Madota</td>
+          <td></td>
           <td>
               —
           </td>
@@ -655,14 +689,14 @@
           <td class="num">0</td>
           <td class="num">27</td>
           <td class="num">27.0</td>
-          <td><a href="https://www.beatport.com/track/mi-hogar/22788491" target="_blank" rel="noopener noreferrer">Mi Hogar</a></td>
-          <td class="num">Original Mix</td>
-          <td>Kora (CA), Madota</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="watermark nora en pure  extended mix">
           <td class="num">28</td>
           <td class="score">0.9045</td>
+          <td><a href="https://www.beatport.com/track/watermark/22332606" target="_blank" rel="noopener noreferrer">Watermark</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Nora En Pure</td>
+          <td></td>
           <td>
               —
           </td>
@@ -674,14 +708,14 @@
           <td class="num">0</td>
           <td class="num">28</td>
           <td class="num">28.0</td>
-          <td><a href="https://www.beatport.com/track/watermark/22332606" target="_blank" rel="noopener noreferrer">Watermark</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Nora En Pure</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="jungle blues fairtone  extended mix">
           <td class="num">29</td>
           <td class="score">0.9010</td>
+          <td><a href="https://www.beatport.com/track/jungle-blues/22649103" target="_blank" rel="noopener noreferrer">Jungle Blues</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Fairtone</td>
+          <td></td>
           <td>
               —
           </td>
@@ -693,14 +727,14 @@
           <td class="num">0</td>
           <td class="num">29</td>
           <td class="num">29.0</td>
-          <td><a href="https://www.beatport.com/track/jungle-blues/22649103" target="_blank" rel="noopener noreferrer">Jungle Blues</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Fairtone</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="my friend groove armada evokings, dot (br), simo not simon evokings, dot (br) & simo not simon extended remix">
           <td class="num">30</td>
           <td class="score">0.8975</td>
+          <td><a href="https://www.beatport.com/track/my-friend/20524959" target="_blank" rel="noopener noreferrer">My Friend</a></td>
+          <td class="num">Evokings, DOT (BR) & simo not simon Extended Remix</td>
+          <td>Groove Armada</td>
+          <td>Evokings, DOT (BR), simo not simon</td>
           <td>
               —
           </td>
@@ -712,14 +746,14 @@
           <td class="num">0</td>
           <td class="num">30</td>
           <td class="num">30.0</td>
-          <td><a href="https://www.beatport.com/track/my-friend/20524959" target="_blank" rel="noopener noreferrer">My Friend</a></td>
-          <td class="num">Evokings, DOT (BR) & simo not simon Extended Remix</td>
-          <td>Groove Armada</td>
-          <td>Evokings, DOT (BR), simo not simon</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="dance with me makhmurian  extended mix">
           <td class="num">31</td>
           <td class="score">0.8939</td>
+          <td><a href="https://www.beatport.com/track/dance-with-me/22845988" target="_blank" rel="noopener noreferrer">Dance With Me</a></td>
+          <td class="num">Extended Mix</td>
+          <td>MakhmuriaN</td>
+          <td></td>
           <td>
               —
           </td>
@@ -731,14 +765,14 @@
           <td class="num">0</td>
           <td class="num">31</td>
           <td class="num">31.0</td>
-          <td><a href="https://www.beatport.com/track/dance-with-me/22845988" target="_blank" rel="noopener noreferrer">Dance With Me</a></td>
-          <td class="num">Extended Mix</td>
-          <td>MakhmuriaN</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="anunnaki whispers raidho  original mix">
           <td class="num">32</td>
           <td class="score">0.8904</td>
+          <td><a href="https://www.beatport.com/track/anunnaki-whispers/22771077" target="_blank" rel="noopener noreferrer">Anunnaki Whispers</a></td>
+          <td class="num">Original Mix</td>
+          <td>Raidho</td>
+          <td></td>
           <td>
               —
           </td>
@@ -750,14 +784,14 @@
           <td class="num">0</td>
           <td class="num">32</td>
           <td class="num">32.0</td>
-          <td><a href="https://www.beatport.com/track/anunnaki-whispers/22771077" target="_blank" rel="noopener noreferrer">Anunnaki Whispers</a></td>
-          <td class="num">Original Mix</td>
-          <td>Raidho</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="follow the star modd, voice of babylon  extended mix">
           <td class="num">33</td>
           <td class="score">0.8869</td>
+          <td><a href="https://www.beatport.com/track/follow-the-star/22431371" target="_blank" rel="noopener noreferrer">Follow The Star</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Modd, Voice of Babylon</td>
+          <td></td>
           <td>
               —
           </td>
@@ -769,14 +803,14 @@
           <td class="num">0</td>
           <td class="num">33</td>
           <td class="num">33.0</td>
-          <td><a href="https://www.beatport.com/track/follow-the-star/22431371" target="_blank" rel="noopener noreferrer">Follow The Star</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Modd, Voice of Babylon</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="donkey zuma dionys, benshu[sb]  original mix">
           <td class="num">34</td>
           <td class="score">0.8833</td>
+          <td><a href="https://www.beatport.com/track/donkey/22952572" target="_blank" rel="noopener noreferrer">Donkey</a></td>
+          <td class="num">Original Mix</td>
+          <td>Zuma Dionys, BENSHU[SB]</td>
+          <td></td>
           <td>
               —
           </td>
@@ -788,14 +822,14 @@
           <td class="num">0</td>
           <td class="num">34</td>
           <td class="num">34.0</td>
-          <td><a href="https://www.beatport.com/track/donkey/22952572" target="_blank" rel="noopener noreferrer">Donkey</a></td>
-          <td class="num">Original Mix</td>
-          <td>Zuma Dionys, BENSHU[SB]</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="konocco newman (i love)  extended mix">
           <td class="num">35</td>
           <td class="score">0.8798</td>
+          <td><a href="https://www.beatport.com/track/konocco/22776051" target="_blank" rel="noopener noreferrer">Konocco</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Newman (I Love)</td>
+          <td></td>
           <td>
               —
           </td>
@@ -807,14 +841,14 @@
           <td class="num">0</td>
           <td class="num">35</td>
           <td class="num">35.0</td>
-          <td><a href="https://www.beatport.com/track/konocco/22776051" target="_blank" rel="noopener noreferrer">Konocco</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Newman (I Love)</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="last journey dhaf dulus dulus remix">
           <td class="num">36</td>
           <td class="score">0.8763</td>
+          <td><a href="https://www.beatport.com/track/last-journey/22468986" target="_blank" rel="noopener noreferrer">Last Journey</a></td>
+          <td class="num">Dulus Remix</td>
+          <td>DHAF</td>
+          <td>Dulus</td>
           <td>
               —
           </td>
@@ -826,14 +860,14 @@
           <td class="num">0</td>
           <td class="num">36</td>
           <td class="num">36.0</td>
-          <td><a href="https://www.beatport.com/track/last-journey/22468986" target="_blank" rel="noopener noreferrer">Last Journey</a></td>
-          <td class="num">Dulus Remix</td>
-          <td>DHAF</td>
-          <td>Dulus</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="somebody cem gemalmaz  extended mix">
           <td class="num">37</td>
           <td class="score">0.8727</td>
+          <td><a href="https://www.beatport.com/track/somebody/22188783" target="_blank" rel="noopener noreferrer">Somebody</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Cem Gemalmaz</td>
+          <td></td>
           <td>
               —
           </td>
@@ -845,14 +879,14 @@
           <td class="num">0</td>
           <td class="num">37</td>
           <td class="num">37.0</td>
-          <td><a href="https://www.beatport.com/track/somebody/22188783" target="_blank" rel="noopener noreferrer">Somebody</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Cem Gemalmaz</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="hidden faces pambouk  original mix">
           <td class="num">38</td>
           <td class="score">0.8692</td>
+          <td><a href="https://www.beatport.com/track/hidden-faces/19041011" target="_blank" rel="noopener noreferrer">Hidden Faces</a></td>
+          <td class="num">Original Mix</td>
+          <td>Pambouk</td>
+          <td></td>
           <td>
               —
           </td>
@@ -864,14 +898,14 @@
           <td class="num">0</td>
           <td class="num">38</td>
           <td class="num">38.0</td>
-          <td><a href="https://www.beatport.com/track/hidden-faces/19041011" target="_blank" rel="noopener noreferrer">Hidden Faces</a></td>
-          <td class="num">Original Mix</td>
-          <td>Pambouk</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="shadows d-nox, elan myles soul engineers soul engineers extended remix">
           <td class="num">39</td>
           <td class="score">0.8657</td>
+          <td><a href="https://www.beatport.com/track/shadows/22414832" target="_blank" rel="noopener noreferrer">Shadows</a></td>
+          <td class="num">Soul Engineers Extended Remix</td>
+          <td>D-Nox, Elan Myles</td>
+          <td>Soul Engineers</td>
           <td>
               —
           </td>
@@ -883,14 +917,14 @@
           <td class="num">0</td>
           <td class="num">39</td>
           <td class="num">39.0</td>
-          <td><a href="https://www.beatport.com/track/shadows/22414832" target="_blank" rel="noopener noreferrer">Shadows</a></td>
-          <td class="num">Soul Engineers Extended Remix</td>
-          <td>D-Nox, Elan Myles</td>
-          <td>Soul Engineers</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="home matthias meyer  extended mix">
           <td class="num">40</td>
           <td class="score">0.8621</td>
+          <td><a href="https://www.beatport.com/track/home/20747793" target="_blank" rel="noopener noreferrer">Home</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Matthias Meyer</td>
+          <td></td>
           <td>
               —
           </td>
@@ -902,14 +936,14 @@
           <td class="num">0</td>
           <td class="num">40</td>
           <td class="num">40.0</td>
-          <td><a href="https://www.beatport.com/track/home/20747793" target="_blank" rel="noopener noreferrer">Home</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Matthias Meyer</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="silent echoes passenger 10  extended mix">
           <td class="num">41</td>
           <td class="score">0.8586</td>
+          <td><a href="https://www.beatport.com/track/silent-echoes/22384613" target="_blank" rel="noopener noreferrer">Silent Echoes</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Passenger 10</td>
+          <td></td>
           <td>
               —
           </td>
@@ -921,14 +955,14 @@
           <td class="num">0</td>
           <td class="num">41</td>
           <td class="num">41.0</td>
-          <td><a href="https://www.beatport.com/track/silent-echoes/22384613" target="_blank" rel="noopener noreferrer">Silent Echoes</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Passenger 10</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="jebel ramiro drisdale  original mix">
           <td class="num">42</td>
           <td class="score">0.8551</td>
+          <td><a href="https://www.beatport.com/track/jebel/22868831" target="_blank" rel="noopener noreferrer">Jebel</a></td>
+          <td class="num">Original Mix</td>
+          <td>Ramiro Drisdale</td>
+          <td></td>
           <td>
               —
           </td>
@@ -940,14 +974,14 @@
           <td class="num">0</td>
           <td class="num">42</td>
           <td class="num">42.0</td>
-          <td><a href="https://www.beatport.com/track/jebel/22868831" target="_blank" rel="noopener noreferrer">Jebel</a></td>
-          <td class="num">Original Mix</td>
-          <td>Ramiro Drisdale</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="valia izhevski  original mix">
           <td class="num">43</td>
           <td class="score">0.8515</td>
+          <td><a href="https://www.beatport.com/track/valia/22808821" target="_blank" rel="noopener noreferrer">Valia</a></td>
+          <td class="num">Original Mix</td>
+          <td>Izhevski</td>
+          <td></td>
           <td>
               —
           </td>
@@ -959,14 +993,14 @@
           <td class="num">0</td>
           <td class="num">43</td>
           <td class="num">43.0</td>
-          <td><a href="https://www.beatport.com/track/valia/22808821" target="_blank" rel="noopener noreferrer">Valia</a></td>
-          <td class="num">Original Mix</td>
-          <td>Izhevski</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="suivi lavie au soleil, oreiente  original mix">
           <td class="num">44</td>
           <td class="score">0.8480</td>
+          <td><a href="https://www.beatport.com/track/suivi/20720064" target="_blank" rel="noopener noreferrer">Suivi</a></td>
+          <td class="num">Original Mix</td>
+          <td>Lavie Au Soleil, Oreiente</td>
+          <td></td>
           <td>
               —
           </td>
@@ -978,14 +1012,14 @@
           <td class="num">0</td>
           <td class="num">44</td>
           <td class="num">44.0</td>
-          <td><a href="https://www.beatport.com/track/suivi/20720064" target="_blank" rel="noopener noreferrer">Suivi</a></td>
-          <td class="num">Original Mix</td>
-          <td>Lavie Au Soleil, Oreiente</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="back to the roots amonita, makebo  extended mix">
           <td class="num">45</td>
           <td class="score">0.8444</td>
+          <td><a href="https://www.beatport.com/track/back-to-the-roots/16481162" target="_blank" rel="noopener noreferrer">Back To The Roots</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Amonita, Makebo</td>
+          <td></td>
           <td>
               —
           </td>
@@ -997,14 +1031,14 @@
           <td class="num">0</td>
           <td class="num">45</td>
           <td class="num">45.0</td>
-          <td><a href="https://www.beatport.com/track/back-to-the-roots/16481162" target="_blank" rel="noopener noreferrer">Back To The Roots</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Amonita, Makebo</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="vortex emrat  original mix">
           <td class="num">46</td>
           <td class="score">0.8409</td>
+          <td><a href="https://www.beatport.com/track/vortex/22461184" target="_blank" rel="noopener noreferrer">Vortex</a></td>
+          <td class="num">Original Mix</td>
+          <td>Emrat</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1016,14 +1050,14 @@
           <td class="num">0</td>
           <td class="num">46</td>
           <td class="num">46.0</td>
-          <td><a href="https://www.beatport.com/track/vortex/22461184" target="_blank" rel="noopener noreferrer">Vortex</a></td>
-          <td class="num">Original Mix</td>
-          <td>Emrat</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="hutchula sebastien leger  extended mix">
           <td class="num">47</td>
           <td class="score">0.8374</td>
+          <td><a href="https://www.beatport.com/track/hutchula/20187364" target="_blank" rel="noopener noreferrer">Hutchula</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Sebastien Leger</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1035,14 +1069,14 @@
           <td class="num">0</td>
           <td class="num">47</td>
           <td class="num">47.0</td>
-          <td><a href="https://www.beatport.com/track/hutchula/20187364" target="_blank" rel="noopener noreferrer">Hutchula</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Sebastien Leger</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="body stars tim green  original mix">
           <td class="num">48</td>
           <td class="score">0.8338</td>
+          <td><a href="https://www.beatport.com/track/body-stars/20633755" target="_blank" rel="noopener noreferrer">Body Stars</a></td>
+          <td class="num">Original Mix</td>
+          <td>Tim Green</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1054,14 +1088,14 @@
           <td class="num">0</td>
           <td class="num">48</td>
           <td class="num">48.0</td>
-          <td><a href="https://www.beatport.com/track/body-stars/20633755" target="_blank" rel="noopener noreferrer">Body Stars</a></td>
-          <td class="num">Original Mix</td>
-          <td>Tim Green</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="close your eyes yves murasca, rosario galati karol xvii & mb valence karol xvii & mb valence loco extended remix">
           <td class="num">49</td>
           <td class="score">0.8303</td>
+          <td><a href="https://www.beatport.com/track/close-your-eyes/22999304" target="_blank" rel="noopener noreferrer">Close Your Eyes</a></td>
+          <td class="num">Karol XVII & MB Valence Loco Extended Remix</td>
+          <td>Yves Murasca, Rosario Galati</td>
+          <td>Karol XVII & MB Valence</td>
           <td>
               —
           </td>
@@ -1073,14 +1107,14 @@
           <td class="num">0</td>
           <td class="num">49</td>
           <td class="num">49.0</td>
-          <td><a href="https://www.beatport.com/track/close-your-eyes/22999304" target="_blank" rel="noopener noreferrer">Close Your Eyes</a></td>
-          <td class="num">Karol XVII & MB Valence Loco Extended Remix</td>
-          <td>Yves Murasca, Rosario Galati</td>
-          <td>Karol XVII & MB Valence</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="ouverture capoon, amand khen khen remix">
           <td class="num">50</td>
           <td class="score">0.8268</td>
+          <td><a href="https://www.beatport.com/track/ouverture/21976844" target="_blank" rel="noopener noreferrer">Ouverture</a></td>
+          <td class="num">Khen Remix</td>
+          <td>Capoon, Amand</td>
+          <td>Khen</td>
           <td>
               —
           </td>
@@ -1092,14 +1126,14 @@
           <td class="num">0</td>
           <td class="num">50</td>
           <td class="num">50.0</td>
-          <td><a href="https://www.beatport.com/track/ouverture/21976844" target="_blank" rel="noopener noreferrer">Ouverture</a></td>
-          <td class="num">Khen Remix</td>
-          <td>Capoon, Amand</td>
-          <td>Khen</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="witcher makebo  extended mix">
           <td class="num">51</td>
           <td class="score">0.8232</td>
+          <td><a href="https://www.beatport.com/track/witcher/22019331" target="_blank" rel="noopener noreferrer">Witcher</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Makebo</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1111,14 +1145,14 @@
           <td class="num">0</td>
           <td class="num">51</td>
           <td class="num">51.0</td>
-          <td><a href="https://www.beatport.com/track/witcher/22019331" target="_blank" rel="noopener noreferrer">Witcher</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Makebo</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="norte ramiro drisdale  original mix">
           <td class="num">52</td>
           <td class="score">0.8197</td>
+          <td><a href="https://www.beatport.com/track/norte/22868832" target="_blank" rel="noopener noreferrer">Norte</a></td>
+          <td class="num">Original Mix</td>
+          <td>Ramiro Drisdale</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1130,14 +1164,14 @@
           <td class="num">0</td>
           <td class="num">52</td>
           <td class="num">52.0</td>
-          <td><a href="https://www.beatport.com/track/norte/22868832" target="_blank" rel="noopener noreferrer">Norte</a></td>
-          <td class="num">Original Mix</td>
-          <td>Ramiro Drisdale</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="solara sonicvibe, yoni yarchi  original mix">
           <td class="num">53</td>
           <td class="score">0.8162</td>
+          <td><a href="https://www.beatport.com/track/solara/22297725" target="_blank" rel="noopener noreferrer">Solara</a></td>
+          <td class="num">Original Mix</td>
+          <td>Sonicvibe, Yoni Yarchi</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1149,14 +1183,14 @@
           <td class="num">0</td>
           <td class="num">53</td>
           <td class="num">53.0</td>
-          <td><a href="https://www.beatport.com/track/solara/22297725" target="_blank" rel="noopener noreferrer">Solara</a></td>
-          <td class="num">Original Mix</td>
-          <td>Sonicvibe, Yoni Yarchi</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="blaze nicolas viana  original mix">
           <td class="num">54</td>
           <td class="score">0.8126</td>
+          <td><a href="https://www.beatport.com/track/blaze/20606738" target="_blank" rel="noopener noreferrer">Blaze</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nicolas Viana</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1168,14 +1202,14 @@
           <td class="num">0</td>
           <td class="num">54</td>
           <td class="num">54.0</td>
-          <td><a href="https://www.beatport.com/track/blaze/20606738" target="_blank" rel="noopener noreferrer">Blaze</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nicolas Viana</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="gospel diass  original mix">
           <td class="num">55</td>
           <td class="score">0.8091</td>
+          <td><a href="https://www.beatport.com/track/gospel/19578886" target="_blank" rel="noopener noreferrer">Gospel</a></td>
+          <td class="num">Original Mix</td>
+          <td>Diass</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1187,14 +1221,14 @@
           <td class="num">0</td>
           <td class="num">55</td>
           <td class="num">55.0</td>
-          <td><a href="https://www.beatport.com/track/gospel/19578886" target="_blank" rel="noopener noreferrer">Gospel</a></td>
-          <td class="num">Original Mix</td>
-          <td>Diass</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="blue denominator iorie, bawab  original mix">
           <td class="num">56</td>
           <td class="score">0.8056</td>
+          <td><a href="https://www.beatport.com/track/blue-denominator/22915086" target="_blank" rel="noopener noreferrer">Blue Denominator</a></td>
+          <td class="num">Original Mix</td>
+          <td>Iorie, bawab</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1206,14 +1240,14 @@
           <td class="num">0</td>
           <td class="num">56</td>
           <td class="num">56.0</td>
-          <td><a href="https://www.beatport.com/track/blue-denominator/22915086" target="_blank" rel="noopener noreferrer">Blue Denominator</a></td>
-          <td class="num">Original Mix</td>
-          <td>Iorie, bawab</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="minds tim green  original mix">
           <td class="num">57</td>
           <td class="score">0.8020</td>
+          <td><a href="https://www.beatport.com/track/minds/20633756" target="_blank" rel="noopener noreferrer">Minds</a></td>
+          <td class="num">Original Mix</td>
+          <td>Tim Green</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1225,14 +1259,14 @@
           <td class="num">0</td>
           <td class="num">57</td>
           <td class="num">57.0</td>
-          <td><a href="https://www.beatport.com/track/minds/20633756" target="_blank" rel="noopener noreferrer">Minds</a></td>
-          <td class="num">Original Mix</td>
-          <td>Tim Green</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="high priestess gux jimenez, dastan (us)  extended mix">
           <td class="num">58</td>
           <td class="score">0.7985</td>
+          <td><a href="https://www.beatport.com/track/high-priestess/20497273" target="_blank" rel="noopener noreferrer">High Priestess</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Gux Jimenez, Dastan (US)</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1244,14 +1278,14 @@
           <td class="num">0</td>
           <td class="num">58</td>
           <td class="num">58.0</td>
-          <td><a href="https://www.beatport.com/track/high-priestess/20497273" target="_blank" rel="noopener noreferrer">High Priestess</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Gux Jimenez, Dastan (US)</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="gaufrette sebastien leger  original mix">
           <td class="num">59</td>
           <td class="score">0.7949</td>
+          <td><a href="https://www.beatport.com/track/gaufrette/19908060" target="_blank" rel="noopener noreferrer">Gaufrette</a></td>
+          <td class="num">Original Mix</td>
+          <td>Sebastien Leger</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1263,14 +1297,14 @@
           <td class="num">0</td>
           <td class="num">59</td>
           <td class="num">59.0</td>
-          <td><a href="https://www.beatport.com/track/gaufrette/19908060" target="_blank" rel="noopener noreferrer">Gaufrette</a></td>
-          <td class="num">Original Mix</td>
-          <td>Sebastien Leger</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="good old days mailoh heaven inc. heaven inc. remix">
           <td class="num">60</td>
           <td class="score">0.7914</td>
+          <td><a href="https://www.beatport.com/track/good-old-days/22943609" target="_blank" rel="noopener noreferrer">Good Old Days</a></td>
+          <td class="num">Heaven INC. Remix</td>
+          <td>Mailoh</td>
+          <td>Heaven INC.</td>
           <td>
               —
           </td>
@@ -1282,14 +1316,14 @@
           <td class="num">0</td>
           <td class="num">60</td>
           <td class="num">60.0</td>
-          <td><a href="https://www.beatport.com/track/good-old-days/22943609" target="_blank" rel="noopener noreferrer">Good Old Days</a></td>
-          <td class="num">Heaven INC. Remix</td>
-          <td>Mailoh</td>
-          <td>Heaven INC.</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="voce artic white  extended mix">
           <td class="num">61</td>
           <td class="score">0.7879</td>
+          <td><a href="https://www.beatport.com/track/voce/20523458" target="_blank" rel="noopener noreferrer">Voce</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Artic White</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1301,14 +1335,14 @@
           <td class="num">0</td>
           <td class="num">61</td>
           <td class="num">61.0</td>
-          <td><a href="https://www.beatport.com/track/voce/20523458" target="_blank" rel="noopener noreferrer">Voce</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Artic White</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="children gorje hewek, etne  extended mix">
           <td class="num">62</td>
           <td class="score">0.7843</td>
+          <td><a href="https://www.beatport.com/track/children/18837473" target="_blank" rel="noopener noreferrer">Children</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Gorje Hewek, ETNE</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1320,14 +1354,14 @@
           <td class="num">0</td>
           <td class="num">62</td>
           <td class="num">62.0</td>
-          <td><a href="https://www.beatport.com/track/children/18837473" target="_blank" rel="noopener noreferrer">Children</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Gorje Hewek, ETNE</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="a thousand and one alex konstantinov, journey of the soul  extended mix">
           <td class="num">63</td>
           <td class="score">0.7808</td>
+          <td><a href="https://www.beatport.com/track/a-thousand-and-one/22937098" target="_blank" rel="noopener noreferrer">A Thousand and One</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Alex Konstantinov, Journey of the Soul</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1339,14 +1373,14 @@
           <td class="num">0</td>
           <td class="num">63</td>
           <td class="num">63.0</td>
-          <td><a href="https://www.beatport.com/track/a-thousand-and-one/22937098" target="_blank" rel="noopener noreferrer">A Thousand and One</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Alex Konstantinov, Journey of the Soul</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="grace limara  extended mix">
           <td class="num">64</td>
           <td class="score">0.7773</td>
+          <td><a href="https://www.beatport.com/track/grace/22876968" target="_blank" rel="noopener noreferrer">Grace</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Limara</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1358,14 +1392,14 @@
           <td class="num">0</td>
           <td class="num">64</td>
           <td class="num">64.0</td>
-          <td><a href="https://www.beatport.com/track/grace/22876968" target="_blank" rel="noopener noreferrer">Grace</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Limara</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="feel love modd, voice of babylon  extended mix">
           <td class="num">65</td>
           <td class="score">0.7737</td>
+          <td><a href="https://www.beatport.com/track/feel-love/22431372" target="_blank" rel="noopener noreferrer">Feel Love</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Modd, Voice of Babylon</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1377,14 +1411,14 @@
           <td class="num">0</td>
           <td class="num">65</td>
           <td class="num">65.0</td>
-          <td><a href="https://www.beatport.com/track/feel-love/22431372" target="_blank" rel="noopener noreferrer">Feel Love</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Modd, Voice of Babylon</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="insomnia amonita  extended mix">
           <td class="num">66</td>
           <td class="score">0.7702</td>
+          <td><a href="https://www.beatport.com/track/insomnia/22328069" target="_blank" rel="noopener noreferrer">Insomnia</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Amonita</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1396,14 +1430,14 @@
           <td class="num">0</td>
           <td class="num">66</td>
           <td class="num">66.0</td>
-          <td><a href="https://www.beatport.com/track/insomnia/22328069" target="_blank" rel="noopener noreferrer">Insomnia</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Amonita</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="loveland nick warren  original mix">
           <td class="num">67</td>
           <td class="score">0.7667</td>
+          <td><a href="https://www.beatport.com/track/loveland/21479195" target="_blank" rel="noopener noreferrer">Loveland</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nick Warren</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1415,14 +1449,14 @@
           <td class="num">0</td>
           <td class="num">67</td>
           <td class="num">67.0</td>
-          <td><a href="https://www.beatport.com/track/loveland/21479195" target="_blank" rel="noopener noreferrer">Loveland</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nick Warren</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="it feels so good simone vitullo, cammora  extended mix">
           <td class="num">68</td>
           <td class="score">0.7631</td>
+          <td><a href="https://www.beatport.com/track/it-feels-so-good/18196017" target="_blank" rel="noopener noreferrer">It Feels So Good</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Simone Vitullo, Cammora</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1434,14 +1468,14 @@
           <td class="num">0</td>
           <td class="num">68</td>
           <td class="num">68.0</td>
-          <td><a href="https://www.beatport.com/track/it-feels-so-good/18196017" target="_blank" rel="noopener noreferrer">It Feels So Good</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Simone Vitullo, Cammora</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="alchemist volen sentir, makebo  original mix">
           <td class="num">69</td>
           <td class="score">0.7596</td>
+          <td><a href="https://www.beatport.com/track/alchemist/17464011" target="_blank" rel="noopener noreferrer">Alchemist</a></td>
+          <td class="num">Original Mix</td>
+          <td>Volen Sentir, Makebo</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1453,14 +1487,14 @@
           <td class="num">0</td>
           <td class="num">69</td>
           <td class="num">69.0</td>
-          <td><a href="https://www.beatport.com/track/alchemist/17464011" target="_blank" rel="noopener noreferrer">Alchemist</a></td>
-          <td class="num">Original Mix</td>
-          <td>Volen Sentir, Makebo</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="hypnotico jelly for the babies, flanerr  original mix">
           <td class="num">70</td>
           <td class="score">0.7561</td>
+          <td><a href="https://www.beatport.com/track/hypnotico/22872687" target="_blank" rel="noopener noreferrer">Hypnotico</a></td>
+          <td class="num">Original Mix</td>
+          <td>Jelly For The Babies, flanerr</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1472,14 +1506,14 @@
           <td class="num">0</td>
           <td class="num">70</td>
           <td class="num">70.0</td>
-          <td><a href="https://www.beatport.com/track/hypnotico/22872687" target="_blank" rel="noopener noreferrer">Hypnotico</a></td>
-          <td class="num">Original Mix</td>
-          <td>Jelly For The Babies, flanerr</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="constant blue iorie, bawab  original mix">
           <td class="num">71</td>
           <td class="score">0.7525</td>
+          <td><a href="https://www.beatport.com/track/constant-blue/22915087" target="_blank" rel="noopener noreferrer">Constant Blue</a></td>
+          <td class="num">Original Mix</td>
+          <td>Iorie, bawab</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1491,14 +1525,14 @@
           <td class="num">0</td>
           <td class="num">71</td>
           <td class="num">71.0</td>
-          <td><a href="https://www.beatport.com/track/constant-blue/22915087" target="_blank" rel="noopener noreferrer">Constant Blue</a></td>
-          <td class="num">Original Mix</td>
-          <td>Iorie, bawab</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="notkansas cass (uk)  cass 4by4 mix">
           <td class="num">72</td>
           <td class="score">0.7490</td>
+          <td><a href="https://www.beatport.com/track/notkansas/22660771" target="_blank" rel="noopener noreferrer">NotKansas</a></td>
+          <td class="num">Cass 4by4 Mix</td>
+          <td>Cass (UK)</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1510,14 +1544,14 @@
           <td class="num">0</td>
           <td class="num">72</td>
           <td class="num">72.0</td>
-          <td><a href="https://www.beatport.com/track/notkansas/22660771" target="_blank" rel="noopener noreferrer">NotKansas</a></td>
-          <td class="num">Cass 4by4 Mix</td>
-          <td>Cass (UK)</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="april fools lee burridge, lost desert  extended mix">
           <td class="num">73</td>
           <td class="score">0.7455</td>
+          <td><a href="https://www.beatport.com/track/april-fools/22455285" target="_blank" rel="noopener noreferrer">April Fools</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Lee Burridge, Lost Desert</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1529,14 +1563,14 @@
           <td class="num">0</td>
           <td class="num">73</td>
           <td class="num">73.0</td>
-          <td><a href="https://www.beatport.com/track/april-fools/22455285" target="_blank" rel="noopener noreferrer">April Fools</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Lee Burridge, Lost Desert</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="memories remain lee burridge, lost desert  november snowflakes (extended mix)">
           <td class="num">74</td>
           <td class="score">0.7419</td>
+          <td><a href="https://www.beatport.com/track/memories-remain/22455283" target="_blank" rel="noopener noreferrer">Memories Remain</a></td>
+          <td class="num">November Snowflakes (Extended Mix)</td>
+          <td>Lee Burridge, Lost Desert</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1548,14 +1582,14 @@
           <td class="num">0</td>
           <td class="num">74</td>
           <td class="num">74.0</td>
-          <td><a href="https://www.beatport.com/track/memories-remain/22455283" target="_blank" rel="noopener noreferrer">Memories Remain</a></td>
-          <td class="num">November Snowflakes (Extended Mix)</td>
-          <td>Lee Burridge, Lost Desert</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="unity anthem feat. yuliana g lillo r, s.a.n.t.y rigooni rigooni remix">
           <td class="num">75</td>
           <td class="score">0.7384</td>
+          <td><a href="https://www.beatport.com/track/unity-anthem-feat-yuliana-g/22164142" target="_blank" rel="noopener noreferrer">Unity Anthem feat. Yuliana G</a></td>
+          <td class="num">RIGOONI Remix</td>
+          <td>Lillo R, S.A.N.T.Y</td>
+          <td>RIGOONI</td>
           <td>
               —
           </td>
@@ -1567,14 +1601,14 @@
           <td class="num">0</td>
           <td class="num">75</td>
           <td class="num">75.0</td>
-          <td><a href="https://www.beatport.com/track/unity-anthem-feat-yuliana-g/22164142" target="_blank" rel="noopener noreferrer">Unity Anthem feat. Yuliana G</a></td>
-          <td class="num">RIGOONI Remix</td>
-          <td>Lillo R, S.A.N.T.Y</td>
-          <td>RIGOONI</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="light between the trees proff  extended mix">
           <td class="num">76</td>
           <td class="score">0.7348</td>
+          <td><a href="https://www.beatport.com/track/light-between-the-trees/21075778" target="_blank" rel="noopener noreferrer">Light Between the Trees</a></td>
+          <td class="num">Extended Mix</td>
+          <td>PROFF</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1586,14 +1620,14 @@
           <td class="num">0</td>
           <td class="num">76</td>
           <td class="num">76.0</td>
-          <td><a href="https://www.beatport.com/track/light-between-the-trees/21075778" target="_blank" rel="noopener noreferrer">Light Between the Trees</a></td>
-          <td class="num">Extended Mix</td>
-          <td>PROFF</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="padisha nhar  original mix">
           <td class="num">77</td>
           <td class="score">0.7313</td>
+          <td><a href="https://www.beatport.com/track/padisha/20639668" target="_blank" rel="noopener noreferrer">Padisha</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nhar</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1605,14 +1639,14 @@
           <td class="num">0</td>
           <td class="num">77</td>
           <td class="num">77.0</td>
-          <td><a href="https://www.beatport.com/track/padisha/20639668" target="_blank" rel="noopener noreferrer">Padisha</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nhar</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="dancer daniel williams  original mix">
           <td class="num">78</td>
           <td class="score">0.7278</td>
+          <td><a href="https://www.beatport.com/track/dancer/22868664" target="_blank" rel="noopener noreferrer">Dancer</a></td>
+          <td class="num">Original Mix</td>
+          <td>Daniel Williams</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1624,14 +1658,14 @@
           <td class="num">0</td>
           <td class="num">78</td>
           <td class="num">78.0</td>
-          <td><a href="https://www.beatport.com/track/dancer/22868664" target="_blank" rel="noopener noreferrer">Dancer</a></td>
-          <td class="num">Original Mix</td>
-          <td>Daniel Williams</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="flashmob taylan  original mix">
           <td class="num">79</td>
           <td class="score">0.7242</td>
+          <td><a href="https://www.beatport.com/track/flashmob/22472327" target="_blank" rel="noopener noreferrer">Flashmob</a></td>
+          <td class="num">Original Mix</td>
+          <td>Taylan</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1643,14 +1677,14 @@
           <td class="num">0</td>
           <td class="num">79</td>
           <td class="num">79.0</td>
-          <td><a href="https://www.beatport.com/track/flashmob/22472327" target="_blank" rel="noopener noreferrer">Flashmob</a></td>
-          <td class="num">Original Mix</td>
-          <td>Taylan</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="on dancing martin valencia  extended mix">
           <td class="num">80</td>
           <td class="score">0.7207</td>
+          <td><a href="https://www.beatport.com/track/on-dancing/22183112" target="_blank" rel="noopener noreferrer">On Dancing</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Martin Valencia</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1662,14 +1696,14 @@
           <td class="num">0</td>
           <td class="num">80</td>
           <td class="num">80.0</td>
-          <td><a href="https://www.beatport.com/track/on-dancing/22183112" target="_blank" rel="noopener noreferrer">On Dancing</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Martin Valencia</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="on my mind jean claude ades  original mix">
           <td class="num">81</td>
           <td class="score">0.7172</td>
+          <td><a href="https://www.beatport.com/track/on-my-mind/22369515" target="_blank" rel="noopener noreferrer">On My Mind</a></td>
+          <td class="num">Original Mix</td>
+          <td>Jean Claude Ades</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1681,14 +1715,14 @@
           <td class="num">0</td>
           <td class="num">81</td>
           <td class="num">81.0</td>
-          <td><a href="https://www.beatport.com/track/on-my-mind/22369515" target="_blank" rel="noopener noreferrer">On My Mind</a></td>
-          <td class="num">Original Mix</td>
-          <td>Jean Claude Ades</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="cracks feat. cari golden simone vitullo, cari golden tamir regev tamir regev remix">
           <td class="num">82</td>
           <td class="score">0.7136</td>
+          <td><a href="https://www.beatport.com/track/cracks-feat-cari-golden/22486157" target="_blank" rel="noopener noreferrer">Cracks Feat. Cari Golden</a></td>
+          <td class="num">Tamir Regev Remix</td>
+          <td>Simone Vitullo, Cari Golden</td>
+          <td>Tamir Regev</td>
           <td>
               —
           </td>
@@ -1700,14 +1734,14 @@
           <td class="num">0</td>
           <td class="num">82</td>
           <td class="num">82.0</td>
-          <td><a href="https://www.beatport.com/track/cracks-feat-cari-golden/22486157" target="_blank" rel="noopener noreferrer">Cracks Feat. Cari Golden</a></td>
-          <td class="num">Tamir Regev Remix</td>
-          <td>Simone Vitullo, Cari Golden</td>
-          <td>Tamir Regev</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="peace d-nox, elan myles  extended mix">
           <td class="num">83</td>
           <td class="score">0.7101</td>
+          <td><a href="https://www.beatport.com/track/peace/20796149" target="_blank" rel="noopener noreferrer">Peace</a></td>
+          <td class="num">Extended Mix</td>
+          <td>D-Nox, Elan Myles</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1719,14 +1753,14 @@
           <td class="num">0</td>
           <td class="num">83</td>
           <td class="num">83.0</td>
-          <td><a href="https://www.beatport.com/track/peace/20796149" target="_blank" rel="noopener noreferrer">Peace</a></td>
-          <td class="num">Extended Mix</td>
-          <td>D-Nox, Elan Myles</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="you look good tim green  original mix">
           <td class="num">84</td>
           <td class="score">0.7066</td>
+          <td><a href="https://www.beatport.com/track/you-look-good/20633757" target="_blank" rel="noopener noreferrer">You Look Good</a></td>
+          <td class="num">Original Mix</td>
+          <td>Tim Green</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1738,14 +1772,14 @@
           <td class="num">0</td>
           <td class="num">84</td>
           <td class="num">84.0</td>
-          <td><a href="https://www.beatport.com/track/you-look-good/20633757" target="_blank" rel="noopener noreferrer">You Look Good</a></td>
-          <td class="num">Original Mix</td>
-          <td>Tim Green</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="darkness repeats gastón rodríguez (ar)  original mix">
           <td class="num">85</td>
           <td class="score">0.7030</td>
+          <td><a href="https://www.beatport.com/track/darkness-repeats/22461189" target="_blank" rel="noopener noreferrer">Darkness Repeats</a></td>
+          <td class="num">Original Mix</td>
+          <td>Gastón Rodríguez (AR)</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1757,14 +1791,14 @@
           <td class="num">0</td>
           <td class="num">85</td>
           <td class="num">85.0</td>
-          <td><a href="https://www.beatport.com/track/darkness-repeats/22461189" target="_blank" rel="noopener noreferrer">Darkness Repeats</a></td>
-          <td class="num">Original Mix</td>
-          <td>Gastón Rodríguez (AR)</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="glass sounds nortio  original mix">
           <td class="num">86</td>
           <td class="score">0.6995</td>
+          <td><a href="https://www.beatport.com/track/glass-sounds/22480680" target="_blank" rel="noopener noreferrer">Glass Sounds</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nortio</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1776,14 +1810,14 @@
           <td class="num">0</td>
           <td class="num">86</td>
           <td class="num">86.0</td>
-          <td><a href="https://www.beatport.com/track/glass-sounds/22480680" target="_blank" rel="noopener noreferrer">Glass Sounds</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nortio</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="if you mafia mike, kubinowski  extended mix">
           <td class="num">87</td>
           <td class="score">0.6960</td>
+          <td><a href="https://www.beatport.com/track/if-you/20600774" target="_blank" rel="noopener noreferrer">If You</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Mafia Mike, Kubinowski</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1795,14 +1829,14 @@
           <td class="num">0</td>
           <td class="num">87</td>
           <td class="num">87.0</td>
-          <td><a href="https://www.beatport.com/track/if-you/20600774" target="_blank" rel="noopener noreferrer">If You</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Mafia Mike, Kubinowski</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="who loves the sun nu, jo.ke  original mix">
           <td class="num">88</td>
           <td class="score">0.6924</td>
+          <td><a href="https://www.beatport.com/track/who-loves-the-sun/12494581" target="_blank" rel="noopener noreferrer">Who Loves The Sun</a></td>
+          <td class="num">Original Mix</td>
+          <td>Nu, Jo.Ke</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1814,14 +1848,14 @@
           <td class="num">0</td>
           <td class="num">88</td>
           <td class="num">88.0</td>
-          <td><a href="https://www.beatport.com/track/who-loves-the-sun/12494581" target="_blank" rel="noopener noreferrer">Who Loves The Sun</a></td>
-          <td class="num">Original Mix</td>
-          <td>Nu, Jo.Ke</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="oracle's vision raidho  original mix">
           <td class="num">89</td>
           <td class="score">0.6889</td>
+          <td><a href="https://www.beatport.com/track/oracles-vision/22771078" target="_blank" rel="noopener noreferrer">Oracle's Vision</a></td>
+          <td class="num">Original Mix</td>
+          <td>Raidho</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1833,14 +1867,14 @@
           <td class="num">0</td>
           <td class="num">89</td>
           <td class="num">89.0</td>
-          <td><a href="https://www.beatport.com/track/oracles-vision/22771078" target="_blank" rel="noopener noreferrer">Oracle's Vision</a></td>
-          <td class="num">Original Mix</td>
-          <td>Raidho</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="kazantzakis modd, come closer  extended mix">
           <td class="num">90</td>
           <td class="score">0.6854</td>
+          <td><a href="https://www.beatport.com/track/kazantzakis/22796405" target="_blank" rel="noopener noreferrer">Kazantzakis</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Modd, Come Closer</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1852,14 +1886,14 @@
           <td class="num">0</td>
           <td class="num">90</td>
           <td class="num">90.0</td>
-          <td><a href="https://www.beatport.com/track/kazantzakis/22796405" target="_blank" rel="noopener noreferrer">Kazantzakis</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Modd, Come Closer</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="nivara ricardo angeles  original mix">
           <td class="num">91</td>
           <td class="score">0.6818</td>
+          <td><a href="https://www.beatport.com/track/nivara/22709213" target="_blank" rel="noopener noreferrer">Nivara</a></td>
+          <td class="num">Original Mix</td>
+          <td>Ricardo Angeles</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1871,14 +1905,14 @@
           <td class="num">0</td>
           <td class="num">91</td>
           <td class="num">91.0</td>
-          <td><a href="https://www.beatport.com/track/nivara/22709213" target="_blank" rel="noopener noreferrer">Nivara</a></td>
-          <td class="num">Original Mix</td>
-          <td>Ricardo Angeles</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="where i am nikita grib  extended mix">
           <td class="num">92</td>
           <td class="score">0.6783</td>
+          <td><a href="https://www.beatport.com/track/where-i-am/22733343" target="_blank" rel="noopener noreferrer">Where I Am</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Nikita Grib</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1890,14 +1924,14 @@
           <td class="num">0</td>
           <td class="num">92</td>
           <td class="num">92.0</td>
-          <td><a href="https://www.beatport.com/track/where-i-am/22733343" target="_blank" rel="noopener noreferrer">Where I Am</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Nikita Grib</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="you said you loved me mallin  extended mix">
           <td class="num">93</td>
           <td class="score">0.6747</td>
+          <td><a href="https://www.beatport.com/track/you-said-you-loved-me/22440355" target="_blank" rel="noopener noreferrer">You Said You Loved Me</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Mallin</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1909,14 +1943,14 @@
           <td class="num">0</td>
           <td class="num">93</td>
           <td class="num">93.0</td>
-          <td><a href="https://www.beatport.com/track/you-said-you-loved-me/22440355" target="_blank" rel="noopener noreferrer">You Said You Loved Me</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Mallin</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="after the fire alan cerra  extended mix">
           <td class="num">94</td>
           <td class="score">0.6712</td>
+          <td><a href="https://www.beatport.com/track/after-the-fire/22340304" target="_blank" rel="noopener noreferrer">After the Fire</a></td>
+          <td class="num">Extended Mix</td>
+          <td>Alan Cerra</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1928,14 +1962,14 @@
           <td class="num">0</td>
           <td class="num">94</td>
           <td class="num">94.0</td>
-          <td><a href="https://www.beatport.com/track/after-the-fire/22340304" target="_blank" rel="noopener noreferrer">After the Fire</a></td>
-          <td class="num">Extended Mix</td>
-          <td>Alan Cerra</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="one more time naasa, synthetra  extended mix">
           <td class="num">95</td>
           <td class="score">0.6677</td>
+          <td><a href="https://www.beatport.com/track/one-more-time/22339230" target="_blank" rel="noopener noreferrer">One More Time</a></td>
+          <td class="num">Extended Mix</td>
+          <td>NAASA, Synthetra</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1947,14 +1981,14 @@
           <td class="num">0</td>
           <td class="num">95</td>
           <td class="num">95.0</td>
-          <td><a href="https://www.beatport.com/track/one-more-time/22339230" target="_blank" rel="noopener noreferrer">One More Time</a></td>
-          <td class="num">Extended Mix</td>
-          <td>NAASA, Synthetra</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="funkinmusic mredrollo  original mix">
           <td class="num">96</td>
           <td class="score">0.6641</td>
+          <td><a href="https://www.beatport.com/track/funkinmusic/21546687" target="_blank" rel="noopener noreferrer">Funkinmusic</a></td>
+          <td class="num">Original Mix</td>
+          <td>mredrollo</td>
+          <td></td>
           <td>
               —
           </td>
@@ -1966,14 +2000,14 @@
           <td class="num">0</td>
           <td class="num">96</td>
           <td class="num">96.0</td>
-          <td><a href="https://www.beatport.com/track/funkinmusic/21546687" target="_blank" rel="noopener noreferrer">Funkinmusic</a></td>
-          <td class="num">Original Mix</td>
-          <td>mredrollo</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="the sirens rebelski tim green tim green remix">
           <td class="num">97</td>
           <td class="score">0.6606</td>
+          <td><a href="https://www.beatport.com/track/the-sirens/19364241" target="_blank" rel="noopener noreferrer">The Sirens</a></td>
+          <td class="num">Tim Green Remix</td>
+          <td>Rebelski</td>
+          <td>Tim Green</td>
           <td>
               —
           </td>
@@ -1985,14 +2019,14 @@
           <td class="num">0</td>
           <td class="num">97</td>
           <td class="num">97.0</td>
-          <td><a href="https://www.beatport.com/track/the-sirens/19364241" target="_blank" rel="noopener noreferrer">The Sirens</a></td>
-          <td class="num">Tim Green Remix</td>
-          <td>Rebelski</td>
-          <td>Tim Green</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="renaissance alex macondo, sandro laporese, i'm maro, v.valentina  original mix">
           <td class="num">98</td>
           <td class="score">0.6571</td>
+          <td><a href="https://www.beatport.com/track/renaissance/23098547" target="_blank" rel="noopener noreferrer">Renaissance</a></td>
+          <td class="num">Original Mix</td>
+          <td>Alex Macondo, Sandro Laporese, I'm Maro, V.VALENTINA</td>
+          <td></td>
           <td>
               —
           </td>
@@ -2004,14 +2038,14 @@
           <td class="num">0</td>
           <td class="num">98</td>
           <td class="num">98.0</td>
-          <td><a href="https://www.beatport.com/track/renaissance/23098547" target="_blank" rel="noopener noreferrer">Renaissance</a></td>
-          <td class="num">Original Mix</td>
-          <td>Alex Macondo, Sandro Laporese, I'm Maro, V.VALENTINA</td>
-          <td></td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="oracle's vision raidho giovanny aparicio giovanny aparicio remix">
           <td class="num">99</td>
           <td class="score">0.6535</td>
+          <td><a href="https://www.beatport.com/track/oracles-vision/22771080" target="_blank" rel="noopener noreferrer">Oracle's Vision</a></td>
+          <td class="num">Giovanny Aparicio Remix</td>
+          <td>Raidho</td>
+          <td>Giovanny Aparicio</td>
           <td>
               —
           </td>
@@ -2023,14 +2057,14 @@
           <td class="num">0</td>
           <td class="num">99</td>
           <td class="num">99.0</td>
-          <td><a href="https://www.beatport.com/track/oracles-vision/22771080" target="_blank" rel="noopener noreferrer">Oracle's Vision</a></td>
-          <td class="num">Giovanny Aparicio Remix</td>
-          <td>Raidho</td>
-          <td>Giovanny Aparicio</td>
         </tr>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="iskra greg ochman  original mix">
           <td class="num">100</td>
           <td class="score">0.6500</td>
+          <td><a href="https://www.beatport.com/track/iskra/22693594" target="_blank" rel="noopener noreferrer">Iskra</a></td>
+          <td class="num">Original Mix</td>
+          <td>Greg Ochman</td>
+          <td></td>
           <td>
               —
           </td>
@@ -2042,13 +2076,10 @@
           <td class="num">0</td>
           <td class="num">100</td>
           <td class="num">100.0</td>
-          <td><a href="https://www.beatport.com/track/iskra/22693594" target="_blank" rel="noopener noreferrer">Iskra</a></td>
-          <td class="num">Original Mix</td>
-          <td>Greg Ochman</td>
-          <td></td>
         </tr>
       </tbody>
     </table>
+    </div>
   </section>
   <script>
     // Tooltip functionality
@@ -2083,6 +2114,56 @@
       document.addEventListener('click', function() {
         document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show'));
       });
+      
+      // Filter functionality
+      const filterInput = document.getElementById('filter-q');
+      const bucketCheckboxes = document.querySelectorAll('.bucket-filters input[type="checkbox"]');
+      const hideDimCheckbox = document.getElementById('hide-dim');
+      const resultsCount = document.getElementById('results-count');
+      const tableRows = document.querySelectorAll('tbody tr');
+      
+      function applyFilters() {
+        const query = filterInput.value.toLowerCase();
+        const selectedBuckets = Array.from(bucketCheckboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.value);
+        const hideDim = hideDimCheckbox.checked;
+        
+        let visibleCount = 0;
+        
+        tableRows.forEach(row => {
+          const text = row.dataset.text || '';
+          const bucket = row.dataset.bucket || '';
+          const isDim = row.dataset.dim === '1';
+          
+          // Check search query
+          const matchesSearch = !query || text.includes(query);
+          
+          // Check bucket filter
+          const matchesBucket = selectedBuckets.includes(bucket);
+          
+          // Check dim filter
+          const matchesDim = !hideDim || !isDim;
+          
+          // Show row if all conditions match
+          if (matchesSearch && matchesBucket && matchesDim) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        
+        resultsCount.textContent = visibleCount + ' result' + (visibleCount !== 1 ? 's' : '');
+      }
+      
+      // Attach event listeners
+      filterInput.addEventListener('input', applyFilters);
+      bucketCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
+      hideDimCheckbox.addEventListener('change', applyFilters);
+      
+      // Initial count
+      applyFilters();
     });
   </script>
 </body>
