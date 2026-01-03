@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Across all charts | Beatport Continuity</title>
+{% include "_style.html.j2" %}
+</head>
+<body>
+  <div class="top-nav">
+    <a class="nav-link" href="index.html">← Landing</a>
+    {% if chart_weeks %}
+    <a class="nav-link" href="charts/{{ chart_weeks[0][0] }}.html">First chart page</a>
+    {% endif %}
+  </div>
+
+  <section class="panel">
+    <div class="card-header">
+      <div>
+        <h1>Across all tracked charts</h1>
+        <div class="muted">{{ chart_weeks|length }} charts · Weeks covered: {{ unique_weeks|join(', ') }} · Generated {{ generated_at }}</div>
+      </div>
+      <div class="badge">Tracks with cross-chart durability</div>
+    </div>
+    <p class="muted">This page surfaces tracks that appear in more than one tracked chart for the selected week. Per-chart durability remains primary; the aggregate is a transparent rollup you can sanity-check with the raw components.</p>
+    <div class="callout">
+      <strong>Aggregate score (explicit):</strong>
+      <div class="formula">
+        aggregate_score = avg_durability × multiplier<br>
+        multiplier = 1 + {{ aggregate_formula.base_step }} × (chart_count − 1)<br>
+        multiplier is capped at +{{ '%.0f'|format(aggregate_formula.max_boost * 100) }}% (max {{ '%.2f'|format(1 + aggregate_formula.max_boost) }}×)
+      </div>
+      <div style="margin-top: 0.35rem;">Checks: chart_count = number of charts that contain the track this week; avg_durability = mean of the per-chart durability scores. Both are shown as columns so you can audit the multiplier. No hidden weights; this is a transparent heuristic, not an objective truth.</div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top: 1rem;">
+    <div class="card-header">
+      <div>
+        <h2>Tracks appearing in multiple charts</h2>
+        <div class="muted">Sorted by aggregate_score; includes chart_count and raw per-chart metrics.</div>
+      </div>
+      <div class="badge">{{ tracks|length }} tracks</div>
+    </div>
+
+    <div class="controls">
+      <input type="search" id="filter-q" placeholder="Search title / artists / remixers / mix…">
+      <div class="bucket-filters">
+        <label><input type="checkbox" id="filter-anchor" value="Anchor" checked> Anchor</label>
+        <label><input type="checkbox" id="filter-climber" value="Climber" checked> Climber</label>
+        <label><input type="checkbox" id="filter-fader" value="Fader" checked> Fader</label>
+        <label><input type="checkbox" id="filter-spike" value="Spike" checked> Spike</label>
+        <label><input type="checkbox" id="filter-other" value="—" checked> Other</label>
+      </div>
+      <div class="results-count" id="results-count"></div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="tooltip-header" data-tooltip="Aggregate score\navg_durability × multiplier (no hidden weights). Multiplier grows 0.15 per additional chart and caps at +60%.">Aggregate</th>
+            <th class="tooltip-header" data-tooltip="Charts counted\nNumber of tracked charts that include this track for the selected week. Also shows the mix of Top 100 vs Hype charts.">Charts</th>
+            <th class="tooltip-header" data-tooltip="Avg durability\nMean durability score across all charts where the track appears this week.">Avg dur</th>
+            <th class="tooltip-header" data-tooltip="Best durability\nHighest durability score across the included charts for this week.">Best dur</th>
+            <th>Track</th>
+            <th>Mix</th>
+            <th>Artists</th>
+            <th>Remixers</th>
+            <th>Charts + raw metrics</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for track in tracks %}
+          {%- set search_text = (track.title + ' ' + (track.mix_name or '') + ' ' + track.artists + ' ' + track.remixers + ' ' + (track.charts | map(attribute='chart_name') | join(' ')))|lower -%}
+          <tr data-text="{{ search_text }}" data-bucket="{{ track.bucket }}">
+            <td class="num">{{ loop.index }}</td>
+            <td class="num">{{ '%.4f'|format(track.aggregate_score) }}</td>
+            <td>
+              <div>{{ track.chart_count }} charts</div>
+              <div class="muted" style="font-size: 0.85rem;">{{ track.top_chart_count }} top · {{ track.hype_chart_count }} hype</div>
+            </td>
+            <td class="num">{{ '%.4f'|format(track.avg_durability) }}</td>
+            <td class="num">{{ '%.4f'|format(track.max_durability) }}</td>
+            <td><a href="{{ track.url }}" target="_blank" rel="noopener noreferrer">{{ track.title }}</a></td>
+            <td class="num">{{ track.mix_name or '' }}</td>
+            <td>{{ track.artists }}</td>
+            <td>{{ track.remixers }}</td>
+            <td>
+              <details>
+                <summary>Appears in {{ track.chart_count }} chart{{ 's' if track.chart_count != 1 else '' }}</summary>
+                <div class="charts-list">
+                  {% for chart in track.charts %}
+                  <div class="chart-badges">
+                    <span class="chart-pill">{{ chart.chart_name }} <span class="bucket">{{ chart.bucket }}</span></span>
+                    <span class="pill">{{ chart.chart_type }}</span>
+                    <span class="pill">Dur {{ '%.4f'|format(chart.durability_score) }}</span>
+                    <span class="pill">Last rank {{ chart.last_rank if chart.last_rank is not none else '—' }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tooltip bubbles reuse the chart page behavior
+      const tooltipHeaders = document.querySelectorAll('.tooltip-header');
+      tooltipHeaders.forEach(header => {
+        const tooltipText = header.dataset.tooltip;
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.textContent = tooltipText.replace(/\\n/g, '\n');
+        header.appendChild(tooltip);
+        header.addEventListener('mouseenter', function() { tooltip.classList.add('show'); });
+        header.addEventListener('mouseleave', function() { tooltip.classList.remove('show'); });
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tooltip.classList.toggle('show');
+        });
+      });
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show'));
+      });
+
+      const filterInput = document.getElementById('filter-q');
+      const bucketCheckboxes = document.querySelectorAll('.bucket-filters input[type="checkbox"]');
+      const resultsCount = document.getElementById('results-count');
+      const tableRows = document.querySelectorAll('tbody tr');
+
+      function applyFilters() {
+        const query = (filterInput.value || '').toLowerCase();
+        const selectedBuckets = Array.from(bucketCheckboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.value);
+
+        let visible = 0;
+        tableRows.forEach(row => {
+          const text = row.dataset.text || '';
+          const bucket = row.dataset.bucket || '';
+          const matchesSearch = !query || text.includes(query);
+          const matchesBucket = selectedBuckets.includes(bucket);
+
+          if (matchesSearch && matchesBucket) {
+            row.style.display = '';
+            visible++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        resultsCount.textContent = visible + ' result' + (visible === 1 ? '' : 's');
+      }
+
+      filterInput.addEventListener('input', applyFilters);
+      bucketCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
+      applyFilters();
+    });
+  </script>
+</body>
+</html>
