@@ -22,11 +22,12 @@
     h1 { font-size: 1.9rem; margin: 0 0 0.25rem 0; }
     h2 { margin: 0 0 0.5rem 0; }
     .muted { color: var(--muted); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: hidden; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); overflow: visible; }
     .charts { display: grid; gap: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; table-layout: fixed; }
-    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+    table { border-collapse: collapse; width: auto; min-width: 100%; table-layout: auto; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; white-space: nowrap; }
+    th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; }
     tr:nth-child(even) { background: var(--table-stripe); }
     tr.dim td { color: var(--muted); }
     a { color: var(--accent); text-decoration: none; }
@@ -50,9 +51,109 @@
     .top-sub { color: var(--muted); font-size: 0.9rem; display: flex; gap: 0.35rem; flex-wrap: wrap; overflow: hidden; text-overflow: ellipsis; }
     .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); margin-bottom: 1rem; }
     .back-link:hover { color: var(--text); }
+    
+    /* Filter controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 1rem; }
+    .controls input[type="search"] { flex: 1 1 240px; min-width: 180px; padding: 0.5rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.95rem; font-family: inherit; }
+    .controls input[type="search"]::placeholder { color: var(--muted); }
+    .controls input[type="search"]:focus { outline: none; border-color: var(--accent); }
+    .bucket-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .bucket-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .bucket-filters label:hover { background: rgba(255,255,255,0.1); }
+    .bucket-filters input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .hide-dim-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .hide-dim-toggle:hover { background: rgba(255,255,255,0.1); }
+    .hide-dim-toggle input[type="checkbox"] { margin: 0; cursor: pointer; }
+    .results-count { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
+    .top-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .nav-link { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.75rem; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 600; }
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+    .formula { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 0.9rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.92rem; line-height: 1.4; color: var(--muted); }
+    .chart-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .chart-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-size: 0.85rem; color: var(--text); }
+    .chart-pill .bucket { color: var(--muted); font-size: 0.8rem; }
+    details summary { cursor: pointer; list-style: none; user-select: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details { border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.65rem; background: rgba(0,0,0,0.2); }
+    details .charts-list { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; }
+    .callout { background: rgba(255,255,255,0.06); border: 1px dashed var(--border); border-radius: 10px; padding: 0.85rem 1rem; color: var(--muted); line-height: 1.45; }
+    .pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+  /* Tooltip header wrapper */
+.tooltip-header{
+  position: relative;
+  cursor: help;
+  user-select: none;
+  overflow: visible !important; /* ensure tooltip isn't clipped by cell */
+}
+
+/* Tooltip bubble */
+.tooltip{
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  /* Visuals */
+  background: rgba(23, 27, 35, 0.98);
+  border: 1px solid rgba(84, 193, 255, 0.6);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+  /* Critical: stop inheriting TH typography */
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  line-height: 1.35;
+
+  /* Readability + wrapping */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+
+  /* Width */
+  width: max-content;
+  max-width: min(420px, 90vw);
+
+  /* Don’t steal hover; keeps hover stable */
+  pointer-events: none;
+}
+
+.tooltip.show{
+  display: block;
+}
+
+/* Show on hover (CSS-only) */
+.tooltip-header:hover .tooltip{
+  display: block;
+}
+
+/* Arrow */
+.tooltip::after{
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(84, 193, 255, 0.6);
+}
+
+/* Optional: soften hover highlight so it doesn't fight the tooltip */
+.tooltip-header:hover{
+  background: rgba(255,255,255,0.04);
+}
   </style></head>
 <body>
-  <a class="back-link" href="../index.html">← Back to overview</a>
+  <div class="top-nav">
+    <a class="nav-link" href="../index.html">← Overview</a>
+    <a class="nav-link" href="../all.html">Across all charts</a>
+  </div>
   <section class="panel">
     <div class="card-header">
       <div>
@@ -61,29 +162,48 @@
       </div>
       <div class="badge">Top 1 tracks</div>
     </div>
+    
+    <div class="controls">
+      <input type="search" id="filter-q" placeholder="Search title / artists / remixers / mix…">
+      <div class="bucket-filters">
+        <label><input type="checkbox" id="filter-anchor" value="Anchor" checked> Anchor</label>
+        <label><input type="checkbox" id="filter-climber" value="Climber" checked> Climber</label>
+        <label><input type="checkbox" id="filter-fader" value="Fader" checked> Fader</label>
+        <label><input type="checkbox" id="filter-spike" value="Spike" checked> Spike</label>
+        <label><input type="checkbox" id="filter-other" value="—" checked> Other</label>
+      </div>
+      <label class="hide-dim-toggle"><input type="checkbox" id="hide-dim"> Hide dim rows</label>
+      <div class="results-count" id="results-count"></div>
+    </div>
+    
+    <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Score</th>
-          <th>Type</th>
-          <th>Cur</th>
-          <th>WoW</th>
-          <th>Weeks</th>
-          <th>Streak</th>
-          <th>Re</th>
-          <th>Best</th>
-          <th>Avg</th>
-          <th>Track</th>
-          <th>Mix</th>
-          <th>Artists</th>
-          <th>Remixers</th>
+          <th class="tooltip-header" data-tooltip="Rank in this table\nPosition after sorting tracks by Durability Score for this chart and week.">#</th>
+          <th class="tooltip-header" data-tooltip="Durability score\nComposite score that emphasizes how long and how consistently a track has appeared on this chart.\n\nBuilt from:\n• weeks present\n• stability (low volatility)\n• momentum (secondary)\n• re-entries\n• chart context\n\nHigher score = more durable over time.\nNot a popularity or quality judgment.">Score</th>
+          <th class="tooltip-header" data-tooltip="Track title\nCanonical track name as listed on Beatport.\n\nLinks to the Beatport track page.">Track</th>
+          <th class="tooltip-header" data-tooltip="Mix / version\nSpecific mix or version of the track\n(e.g. Extended Mix, Original Mix).\n\nSeparated to avoid duplication in the title.">Mix</th>
+          <th class="tooltip-header" data-tooltip="Primary artists\nMain credited artists for the track.">Artists</th>
+          <th class="tooltip-header" data-tooltip="Remix artists\nArtists credited for remixing this version, if any.\n\nBlank means the track is not a remix.">Remixers</th>
+          <th class="tooltip-header" data-tooltip="Durability pattern\nQualitative classification based on observed behavior:\n\n• Anchor — long-lasting, stable presence\n• Climber — short history, improving position\n• Fader — long presence, currently declining\n• Spike — brief, volatile peak\n\nDerived from raw metrics; no single metric decides this.">Type</th>
+          <th class="tooltip-header" data-tooltip="Current rank\nTrack's most recent chart position for this week.\nLower numbers are better.\n\nBlank means the track is not present this week.">Cur</th>
+          <th class="tooltip-header" data-tooltip="Week-over-week movement\nChange in rank compared to the previous week.\n\n• Positive = moved up\n• Negative = moved down\n• Zero = unchanged\n\nSmaller movements matter more than large one-week jumps.">WoW</th>
+          <th class="tooltip-header" data-tooltip="Weeks on chart\nTotal number of weeks this track has appeared on this chart.\n\nIncludes non-consecutive appearances.\nThis is the strongest durability signal.">Weeks</th>
+          <th class="tooltip-header" data-tooltip="Current / longest streak\nLeft number: consecutive weeks currently on chart\nRight number: longest uninterrupted run\n\nBreaks indicate exits and re-entries.">Streak</th>
+          <th class="tooltip-header" data-tooltip="Re-entries\nNumber of times the track exited and later re-entered the chart.\n\nRe-entries often indicate rediscovery or long-term DJ utility.">Re</th>
+          <th class="tooltip-header" data-tooltip="Peak rank\nHighest (best) chart position the track has ever reached.\n\nUsed for context only — peak alone does not imply durability.">Best</th>
+          <th class="tooltip-header" data-tooltip="Average rank\nAverage chart position across all appearances.\n\nRepresents where the track typically lives, not just its peak.">Avg</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="">
+<tr class="" data-bucket="—" data-dim="0" data-text="test track   ">
           <td class="num">1</td>
           <td class="score">1.0000</td>
+          <td><a href="https://example.com/t1" target="_blank" rel="noopener noreferrer">Test Track</a></td>
+          <td class="num"></td>
+          <td></td>
+          <td></td>
           <td>
               —
           </td>
@@ -95,13 +215,95 @@
           <td class="num">0</td>
           <td class="num">1</td>
           <td class="num">1.0</td>
-          <td><a href="https://example.com/t1" target="_blank" rel="noopener noreferrer">Test Track</a></td>
-          <td class="num"></td>
-          <td></td>
-          <td></td>
         </tr>
       </tbody>
     </table>
+    </div>
   </section>
+  <script>
+    // Tooltip functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const tooltipHeaders = document.querySelectorAll('.tooltip-header');
+      
+      tooltipHeaders.forEach(header => {
+        // Create tooltip element
+        const tooltipText = header.dataset.tooltip;
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        // Replace literal \n with actual line breaks for proper text wrapping
+        tooltip.textContent = tooltipText.replace(/\\n/g, '\n');
+        header.appendChild(tooltip);
+        
+        // Show tooltip on hover
+        header.addEventListener('mouseenter', function() {
+          tooltip.classList.add('show');
+        });
+        header.addEventListener('mouseleave', function() {
+          tooltip.classList.remove('show');
+        });
+        
+        // Show/hide tooltip on click for touch devices
+        header.addEventListener('click', function(e) {
+          e.stopPropagation();
+          tooltip.classList.toggle('show');
+        });
+      });
+      
+      // Close tooltips when clicking elsewhere
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.tooltip').forEach(t => t.classList.remove('show'));
+      });
+      
+      // Filter functionality
+      const filterInput = document.getElementById('filter-q');
+      const bucketCheckboxes = document.querySelectorAll('.bucket-filters input[type="checkbox"]');
+      const hideDimCheckbox = document.getElementById('hide-dim');
+      const resultsCount = document.getElementById('results-count');
+      const tableRows = document.querySelectorAll('tbody tr');
+      
+      function applyFilters() {
+        const query = filterInput.value.toLowerCase();
+        const selectedBuckets = Array.from(bucketCheckboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.value);
+        const hideDim = hideDimCheckbox.checked;
+        
+        let visibleCount = 0;
+        
+        tableRows.forEach(row => {
+          const text = row.dataset.text || '';
+          const bucket = row.dataset.bucket || '';
+          const isDim = row.dataset.dim === '1';
+          
+          // Check search query
+          const matchesSearch = !query || text.includes(query);
+          
+          // Check bucket filter
+          const matchesBucket = selectedBuckets.includes(bucket);
+          
+          // Check dim filter
+          const matchesDim = !hideDim || !isDim;
+          
+          // Show row if all conditions match
+          if (matchesSearch && matchesBucket && matchesDim) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+        
+        resultsCount.textContent = visibleCount + ' result' + (visibleCount !== 1 ? 's' : '');
+      }
+      
+      // Attach event listeners
+      filterInput.addEventListener('input', applyFilters);
+      bucketCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
+      hideDimCheckbox.addEventListener('change', applyFilters);
+      
+      // Initial count
+      applyFilters();
+    });
+  </script>
 </body>
 </html>
