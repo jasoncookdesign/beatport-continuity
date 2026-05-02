@@ -58,10 +58,10 @@
     .controls input[type="search"]::placeholder { color: var(--muted); }
     .controls input[type="search"]:focus { outline: none; border-color: var(--accent); }
     .bucket-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .bucket-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .bucket-filters label { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; transition: background 0.15s; }
     .bucket-filters label:hover { background: rgba(255,255,255,0.1); }
     .bucket-filters input[type="checkbox"] { margin: 0; cursor: pointer; }
-    .hide-dim-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; user-select: none; transition: background 0.15s; }
+    .hide-dim-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.06); border-radius: 6px; cursor: pointer; font-size: 0.85rem; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; transition: background 0.15s; }
     .hide-dim-toggle:hover { background: rgba(255,255,255,0.1); }
     .hide-dim-toggle input[type="checkbox"] { margin: 0; cursor: pointer; }
     .results-count { color: var(--muted); font-size: 0.85rem; margin-left: auto; }
@@ -72,7 +72,7 @@
     .chart-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
     .chart-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); font-size: 0.85rem; color: var(--text); }
     .chart-pill .bucket { color: var(--muted); font-size: 0.8rem; }
-    details summary { cursor: pointer; list-style: none; user-select: none; }
+    details summary { cursor: pointer; list-style: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
     details summary::-webkit-details-marker { display: none; }
     details { border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.65rem; background: rgba(0,0,0,0.2); }
     details .charts-list { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; }
@@ -82,10 +82,7 @@
 .tooltip-header{
   position: relative;
   cursor: help;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
   overflow: visible !important; /* ensure tooltip isn't clipped by cell */
 }
 
