@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Dict, List, Sequence, Tuple
 
+from .db import prune_durability_metrics, prune_chart_entries, vacuum_db
 from .logging_utils import get_logger
 
 LOG = get_logger(__name__)
@@ -283,3 +284,30 @@ def run_compute(conn, as_of_week: date | None = None) -> None:
                 LOG.exception("Rollback failed for chart %s", chart_id)
             LOG.exception("Failed to compute durability for chart %s", chart_id)
             continue
+
+    # -------------------------------------------------------------------------
+    # Maintenance: prune old rows and reclaim disk space.
+    # Run after every compute execution so the database does not grow
+    # quadratically with history.
+    # -------------------------------------------------------------------------
+
+    # Phase 1 — durability_metrics retention (12 most recent distinct weeks).
+    dm_deleted = prune_durability_metrics(conn, keep_weeks=12)
+    if dm_deleted:
+        LOG.info("Pruned %d durability_metrics rows (keeping last 12 weeks)", dm_deleted)
+
+    # Phase 3 — chart_entries / chart_snapshots retention (last 52 weeks).
+    # See db.prune_chart_entries docstring for the residual-limitation note on
+    # how this affects future compute runs for tracks with history beyond 1 year.
+    ce_deleted, cs_deleted = prune_chart_entries(conn, keep_weeks=52)
+    if ce_deleted or cs_deleted:
+        LOG.info(
+            "Pruned %d chart_entries and %d chart_snapshots (keeping last 52 weeks)",
+            ce_deleted,
+            cs_deleted,
+        )
+
+    # VACUUM reclaims pages freed by the pruning deletes above.  It must run
+    # outside any open transaction; prune_* functions commit before returning.
+    vacuum_db(conn)
+    LOG.info("VACUUM complete")

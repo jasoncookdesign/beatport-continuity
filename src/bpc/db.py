@@ -247,3 +247,107 @@ def insert_entry(
         """,
         (snapshot_id, track_id, rank),
     )
+
+
+# ---------------------------------------------------------------------------
+# Database maintenance helpers
+# ---------------------------------------------------------------------------
+
+
+def prune_durability_metrics(conn: sqlite3.Connection, keep_weeks: int = 12) -> int:
+    """Delete durability_metrics rows whose as_of_week is not among the most recent keep_weeks.
+
+    Runs a single DELETE covering all charts; the pruning boundary is determined by
+    the global set of distinct as_of_week values across all charts.
+
+    Returns the number of rows deleted.
+    """
+    rows = conn.execute(
+        "SELECT DISTINCT as_of_week FROM durability_metrics ORDER BY as_of_week DESC LIMIT ?",
+        (keep_weeks,),
+    ).fetchall()
+    if not rows:
+        return 0
+
+    keep = [r[0] for r in rows]
+    placeholders = ",".join("?" * len(keep))
+    cursor = conn.execute(
+        f"DELETE FROM durability_metrics WHERE as_of_week NOT IN ({placeholders})",
+        keep,
+    )
+    deleted = cursor.rowcount
+    conn.commit()
+    return deleted
+
+
+def prune_chart_entries(conn: sqlite3.Connection, keep_weeks: int = 52) -> tuple[int, int]:
+    """Delete chart_entries and chart_snapshots older than keep_weeks.
+
+    The cutoff date is computed as keep_weeks * 7 days before the most recent
+    snapshot_date in chart_snapshots.  Snapshots at or after the cutoff are kept.
+
+    chart_entries must be deleted before chart_snapshots because of the FK constraint
+    (chart_entries.snapshot_id -> chart_snapshots.id).
+
+    RESIDUAL LIMITATION: after entries older than keep_weeks are pruned, subsequent
+    compute runs will see a shorter history for any track that first appeared before
+    the retention window.  Metrics such as first_seen_week, weeks_on_chart, and
+    age_weeks will reflect only the retained window; lifetime stats in already-written
+    durability_metrics rows are unaffected.  This trade-off is intentional: the
+    durability_metrics retention (12 weeks of snapshots) preserves the most recent
+    computed stats, and the raw chart_entries beyond 1 year add disk cost without
+    improving current metric accuracy.
+
+    Returns (entries_deleted, snapshots_deleted).
+    """
+    row = conn.execute("SELECT MAX(snapshot_date) FROM chart_snapshots").fetchone()
+    if not row or not row[0]:
+        return 0, 0
+
+    # The oldest snapshot to KEEP is (keep_weeks - 1) weeks before the most recent.
+    # Using (keep_weeks - 1) * 7 days as the offset makes weekly bucket 0 through
+    # bucket -(keep_weeks-1) inclusive the retained window, which is exactly
+    # keep_weeks snapshots when snapshots land on weekly boundaries.
+    cutoff_row = conn.execute(
+        "SELECT date(?, ? || ' days')",
+        (row[0], -((keep_weeks - 1) * 7)),
+    ).fetchone()
+    cutoff = cutoff_row[0]
+
+    # Delete entries first to satisfy the FK constraint.
+    entries_cursor = conn.execute(
+        """
+        DELETE FROM chart_entries
+        WHERE snapshot_id IN (
+            SELECT id FROM chart_snapshots WHERE snapshot_date < ?
+        )
+        """,
+        (cutoff,),
+    )
+    entries_deleted = entries_cursor.rowcount
+
+    snaps_cursor = conn.execute(
+        "DELETE FROM chart_snapshots WHERE snapshot_date < ?",
+        (cutoff,),
+    )
+    snaps_deleted = snaps_cursor.rowcount
+
+    conn.commit()
+    return entries_deleted, snaps_deleted
+
+
+def vacuum_db(conn: sqlite3.Connection) -> None:
+    """Run VACUUM to reclaim freed pages and defragment the database file.
+
+    VACUUM cannot run inside an open transaction.  Call this only after all
+    pending transactions have been committed.  In Python's sqlite3, calling
+    conn.commit() before this function ensures no implicit transaction is open.
+    The isolation_level is briefly set to None (autocommit) to prevent Python's
+    implicit transaction management from wrapping VACUUM in a BEGIN statement.
+    """
+    old_isolation = conn.isolation_level
+    conn.isolation_level = None  # autocommit: prevents implicit BEGIN before VACUUM
+    try:
+        conn.execute("VACUUM")
+    finally:
+        conn.isolation_level = old_isolation
