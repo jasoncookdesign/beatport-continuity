@@ -252,6 +252,14 @@ def _extract_mix_name(d: dict) -> Optional[str]:
     return None
 
 
+class HypeNotOffered(ValueError):
+    """Beatport has no Hype chart for this genre (is_included_in_hype=false)."""
+
+
+def _is_hype_page(next_data: dict) -> bool:
+    return "hype" in str(next_data.get("page") or "")
+
+
 def _check_genre_supports_hype(next_data: dict) -> Optional[bool]:
     """Check if genre has is_included_in_hype=true in __NEXT_DATA__.
     
@@ -304,9 +312,14 @@ def _parse_chart_from_next_data_order(html: str, limit: int = DEFAULT_LIMIT) -> 
             if "count" in data and data["count"] == 0:
                 results = data.get("results", [])
                 if isinstance(results, list) and len(results) == 0:
+                    if _check_genre_supports_hype(next_data) is False and _is_hype_page(next_data):
+                        raise HypeNotOffered(
+                            "Beatport does not offer a Hype chart for this genre "
+                            "(is_included_in_hype=false, count=0)."
+                        )
                     raise ValueError(
-                        f"Empty results in __NEXT_DATA__ (count=0, results=[]). "
-                        f"Beatport may have disabled hype for this genre or served a landing page."
+                        "Empty results in __NEXT_DATA__ (count=0, results=[]). "
+                        "Beatport may have served a landing page."
                     )
     except ValueError:
         # Re-raise ValueError for count=0 detection
@@ -404,20 +417,11 @@ def parse_chart(html: str) -> List[Dict[str, Any]]:
     """Parse a Beatport chart page into a list of track entries.
 
     Returns dictionaries with keys: track_id, title, mix_name, artists, remixers, url, rank.
-    Returns empty list for unsupported hype charts (is_included_in_hype=false).
-    Raises ValueError if no valid chart entries can be parsed from a supported chart.
+    Raises HypeNotOffered (a ValueError) for a Hype 100 page of a genre Beatport
+    keeps out of its Hype program, and ValueError if no valid chart entries can
+    be parsed.
     """
     soup = BeautifulSoup(html, "lxml")
-
-    # Check early if this is an unsupported hype chart
-    is_hype_request = "hype=true" in html
-    if is_hype_request:
-        next_data = _find_next_data_json(soup)
-        if next_data:
-            supports_hype = _check_genre_supports_hype(next_data)
-            if supports_hype is False:
-                # Genre explicitly doesn't support hype; return empty (not an error)
-                return []
 
     # Prefer __NEXT_DATA__ for structured fields
     entries = _parse_chart_from_next_data_order(html, limit=DEFAULT_LIMIT)

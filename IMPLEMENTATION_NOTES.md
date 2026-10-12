@@ -29,13 +29,14 @@ Updated `upsert_snapshot()` function to accept and store these new fields.
 1. **Parse failures**: Catch exceptions from `parse_chart()`, save debug HTML, record failed snapshot
 2. **Empty results**: Detect `count=0` responses, record as failed with clear message
 3. **Database errors**: Catch and log DB write failures, continue processing
-4. **Network errors**: Already handled by existing retry logic in `fetch.py`
+4. **Network errors**: Retried in `fetch.py`; if every attempt fails, recorded as a failed snapshot too (a failure never overwrites an `ok` snapshot for the same week)
 
 ### 3. Parse Detection (src/bpc/fetch.py)
 
 Enhanced `_parse_chart_from_next_data_order()` to detect the "empty results" condition in `__NEXT_DATA__`:
 - Checks for `count: 0` with `results: []`
-- Raises `ValueError` with descriptive message: "Empty results in __NEXT_DATA__ (count=0, results=[]). Beatport may have disabled hype for this genre or served a landing page."
+- Raises `ValueError` with descriptive message: "Empty results in __NEXT_DATA__ (count=0, results=[]). Beatport may have served a landing page."
+- When the page is a Hype 100 and the genre metadata says `is_included_in_hype: false`, raises `HypeNotOffered` (a `ValueError`) instead, so a genre outside Beatport's Hype program is named as such
 - This is caught by ingestion logic and recorded as a controlled failure
 
 ### 4. Status Reporting (src/bpc/status.py)
