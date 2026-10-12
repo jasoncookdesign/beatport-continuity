@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Dict, List, Sequence, Tuple
 
-from .db import prune_durability_metrics, prune_chart_entries, vacuum_db
+from .db import prune_chart_entries, prune_orphan_tracks, vacuum_db
 from .logging_utils import get_logger
+from .time_utils import week_bucket
 
 LOG = get_logger(__name__)
 
@@ -42,17 +43,31 @@ def _resolve_as_of_week(conn, provided: date | None) -> str | None:
     return row[0] if row and row[0] else None
 
 
-def _fetch_chart_weeks(conn, chart_id: str, as_of_week: str) -> List[str]:
+def _week_no(iso: str) -> int:
+    """Calendar week number: consecutive Mondays map to consecutive integers."""
+    return week_bucket(date.fromisoformat(iso)).toordinal() // 7
+
+
+def known_weeks(conn, chart_id: str, as_of_week: str) -> List[Tuple[int, str]]:
+    """Return [(week_no, snapshot_date)] for the chart's status='ok' weeks.
+
+    Only 'ok' snapshots are known weeks. A 'failed' snapshot, or a Monday with
+    no snapshot row at all, is unknown. If two ok snapshots fall in the same
+    weekly bucket (off-cycle runs in early history), the later one wins.
+    """
     rows = conn.execute(
         """
-        SELECT DISTINCT snapshot_date
+        SELECT snapshot_date
         FROM chart_snapshots
-        WHERE chart_id = ? AND snapshot_date <= ?
+        WHERE chart_id = ? AND snapshot_date <= ? AND status = 'ok'
         ORDER BY snapshot_date
         """,
         (chart_id, as_of_week),
     ).fetchall()
-    return [r[0] for r in rows]
+    by_week: Dict[int, str] = {}
+    for (snapshot_date,) in rows:
+        by_week[_week_no(snapshot_date)] = snapshot_date
+    return sorted(by_week.items())
 
 
 def _fetch_chart_entries(conn, chart_id: str, as_of_week: str) -> List[Tuple[str, str, int]]:
@@ -61,7 +76,7 @@ def _fetch_chart_entries(conn, chart_id: str, as_of_week: str) -> List[Tuple[str
         SELECT cs.snapshot_date, ce.track_id, ce.rank
         FROM chart_entries ce
         JOIN chart_snapshots cs ON cs.id = ce.snapshot_id
-        WHERE cs.chart_id = ? AND cs.snapshot_date <= ?
+        WHERE cs.chart_id = ? AND cs.snapshot_date <= ? AND cs.status = 'ok'
         ORDER BY cs.snapshot_date
         """,
         (chart_id, as_of_week),
@@ -69,39 +84,78 @@ def _fetch_chart_entries(conn, chart_id: str, as_of_week: str) -> List[Tuple[str
     return [(r[0], r[1], r[2]) for r in rows]
 
 
-def _compute_segments(idxs: List[int]) -> Tuple[int, int, int]:
-    """Return (segments_count, max_streak_weeks, last_streak_weeks)."""
+def unknown_weeks(conn, chart_id: str, as_of_week: str) -> List[str]:
+    """Mondays between the chart's first and last snapshot row (up to as_of_week)
+    that have no 'ok' snapshot: failed fetches and weeks with no record at all."""
+    row = conn.execute(
+        "SELECT MIN(snapshot_date), MAX(snapshot_date) FROM chart_snapshots WHERE chart_id = ? AND snapshot_date <= ?",
+        (chart_id, as_of_week),
+    ).fetchone()
+    if not row or not row[0]:
+        return []
+    known = {week_no for week_no, _ in known_weeks(conn, chart_id, as_of_week)}
+    first = week_bucket(date.fromisoformat(row[0]))
+    last = week_bucket(date.fromisoformat(row[1]))
+    out: List[str] = []
+    d = first
+    while d <= last:
+        if d.toordinal() // 7 not in known:
+            out.append(d.isoformat())
+        d += timedelta(weeks=1)
+    return out
+
+
+def _compute_segments(idxs: List[int], known_pos: Dict[int, int]) -> Tuple[int, int, int]:
+    """Return (segments_count, max_streak_weeks, last_streak_weeks).
+
+    idxs are calendar week numbers of the track's appearances, ascending.
+    known_pos maps each known week number to its position among known weeks.
+
+    A streak continues only into the next calendar week. A new segment (a
+    re-entry) starts only after an observed absence: a known week between two
+    appearances. Unknown weeks break a streak but never start a new segment.
+    """
     if not idxs:
         return 0, 0, 0
 
     segments = 1
     current = 1
     max_streak = 1
-    last_streak = 1
 
     for prev, curr in zip(idxs, idxs[1:]):
         if curr == prev + 1:
             current += 1
         else:
-            segments += 1
             current = 1
+            if known_pos[curr] - known_pos[prev] > 1:
+                segments += 1
         max_streak = max(max_streak, current)
-        last_streak = current
 
-    return segments, max_streak, last_streak
+    return segments, max_streak, current
 
 
 def _compute_motion_window(entries: List[TrackWeek], as_of_week: str) -> Tuple[int | None, int | None, int | None, float | None, float | None]:
+    """Rank motion over the current streak only (at most its last 4 weeks).
+
+    prev_rank is the rank in the immediately preceding calendar week; it is
+    None when the track was absent that week or the week is unknown.
+    """
     if not entries:
         return None, None, None, None, None
     if entries[-1].week != as_of_week:
         return None, None, None, None, None
 
+    streak = [entries[-1]]
+    for e in reversed(entries[:-1]):
+        if e.idx != streak[0].idx - 1:
+            break
+        streak.insert(0, e)
+
     last_rank = entries[-1].rank
-    prev_rank = entries[-2].rank if len(entries) >= 2 else None
+    prev_rank = streak[-2].rank if len(streak) >= 2 else None
     wow_delta = prev_rank - last_rank if prev_rank is not None else None
 
-    window = entries[-4:]
+    window = streak[-4:]
     ranks = [e.rank for e in window]
     momentum = None
     volatility = None
@@ -120,6 +174,7 @@ def _build_metric_row(
     entries: List[TrackWeek],
     as_of_week: str,
     as_of_idx: int,
+    known_pos: Dict[int, int],
     max_weeks_observed: int,
 ) -> Dict[str, object]:
     entries_sorted = sorted(entries, key=lambda e: e.idx)
@@ -128,11 +183,12 @@ def _build_metric_row(
     first_seen_week = entries_sorted[0].week
     last_seen_week = entries_sorted[-1].week
 
+    # Age and presence count known weeks only, so unknown weeks don't dilute presence.
     first_idx = idxs[0]
-    age_weeks = (as_of_idx - first_idx) + 1
+    age_weeks = known_pos[as_of_idx] - known_pos[first_idx] + 1
     presence_ratio = weeks_on_chart / age_weeks if age_weeks > 0 else 0.0
 
-    segments_count, max_streak_weeks, last_streak_weeks = _compute_segments(idxs)
+    segments_count, max_streak_weeks, last_streak_weeks = _compute_segments(idxs, known_pos)
     reentry_count = max(segments_count - 1, 0)
     current_streak_weeks = last_streak_weeks if last_seen_week == as_of_week else 0
 
@@ -207,34 +263,36 @@ def run_compute(conn, as_of_week: date | None = None) -> None:
 
     for (chart_id,) in chart_rows:
         try:
-            weeks = _fetch_chart_weeks(conn, chart_id, target_week)
-            if not weeks:
-                LOG.info("No weeks for chart %s up to %s; skipping", chart_id, target_week)
+            known = known_weeks(conn, chart_id, target_week)
+            if not known:
+                LOG.info("No ok weeks for chart %s up to %s; skipping", chart_id, target_week)
                 continue
 
-            chart_as_of_week = weeks[-1]
-            week_index = {w: i for i, w in enumerate(weeks)}
-            max_weeks_observed = len(weeks)
-            as_of_idx = week_index[chart_as_of_week]
+            # The chart's as-of week is its last known week, so a failed latest
+            # fetch leaves the previous metrics standing instead of reading as
+            # every track dropping off.
+            as_of_idx, chart_as_of_week = known[-1]
+            known_pos = {week_no: pos for pos, (week_no, _) in enumerate(known)}
+            week_for_date = {snapshot_date: week_no for week_no, snapshot_date in known}
+            max_weeks_observed = len(known)
 
             raw_entries = _fetch_chart_entries(conn, chart_id, chart_as_of_week)
             tracks: Dict[str, List[TrackWeek]] = {}
             for week, track_id, rank in raw_entries:
-                if week not in week_index:
+                if week not in week_for_date:
                     continue
                 tracks.setdefault(track_id, []).append(
-                    TrackWeek(idx=week_index[week], week=week, rank=int(rank))
+                    TrackWeek(idx=week_for_date[week], week=week, rank=int(rank))
                 )
 
             if not tracks:
                 LOG.info("No entries for chart %s; skipping", chart_id)
                 continue
 
+            # durability_metrics is a derived cache: one slice per chart, the
+            # latest computed. Older slices are recomputable from chart_entries.
             conn.execute("BEGIN")
-            conn.execute(
-                "DELETE FROM durability_metrics WHERE chart_id = ? AND as_of_week = ?",
-                (chart_id, chart_as_of_week),
-            )
+            conn.execute("DELETE FROM durability_metrics WHERE chart_id = ?", (chart_id,))
 
             rows_to_insert: List[Dict[str, object]] = []
             for track_id, tws in tracks.items():
@@ -243,6 +301,7 @@ def run_compute(conn, as_of_week: date | None = None) -> None:
                     entries=tws,
                     as_of_week=chart_as_of_week,
                     as_of_idx=as_of_idx,
+                    known_pos=known_pos,
                     max_weeks_observed=max_weeks_observed,
                 )
                 row["chart_id"] = chart_id
@@ -291,14 +350,9 @@ def run_compute(conn, as_of_week: date | None = None) -> None:
     # quadratically with history.
     # -------------------------------------------------------------------------
 
-    # Phase 1 — durability_metrics retention (12 most recent distinct weeks).
-    dm_deleted = prune_durability_metrics(conn, keep_weeks=12)
-    if dm_deleted:
-        LOG.info("Pruned %d durability_metrics rows (keeping last 12 weeks)", dm_deleted)
-
-    # Phase 3 — chart_entries / chart_snapshots retention (last 52 weeks).
-    # See db.prune_chart_entries docstring for the residual-limitation note on
-    # how this affects future compute runs for tracks with history beyond 1 year.
+    # chart_entries / chart_snapshots retention (last 52 weeks), then the
+    # track metadata nothing references any more.  See the
+    # db.prune_chart_entries docstring for what this means for older history.
     ce_deleted, cs_deleted = prune_chart_entries(conn, keep_weeks=52)
     if ce_deleted or cs_deleted:
         LOG.info(
@@ -306,6 +360,9 @@ def run_compute(conn, as_of_week: date | None = None) -> None:
             ce_deleted,
             cs_deleted,
         )
+    tracks_deleted = prune_orphan_tracks(conn)
+    if tracks_deleted:
+        LOG.info("Pruned %d tracks no longer referenced", tracks_deleted)
 
     # VACUUM reclaims pages freed by the pruning deletes above.  It must run
     # outside any open transaction; prune_* functions commit before returning.

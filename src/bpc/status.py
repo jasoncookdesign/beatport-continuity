@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from .compute import unknown_weeks
 from .config import TRACKED_CHARTS, load_paths
 from .logging_utils import get_logger
 
@@ -103,3 +104,7 @@ def run_status(conn) -> None:
         print(f"* {chart_id}")
         print(f"  snapshots: {snap_str} (entries: {entry_str})")
         print(f"  metrics:   {metrics_week_str} (rows: {metrics_count_str})")
+        if latest_snap is not None:
+            gaps = unknown_weeks(conn, chart_id, latest_snap)
+            if gaps:
+                print(f"  unknown:   {len(gaps)} weeks ({', '.join(gaps)})")
