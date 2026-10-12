@@ -17,6 +17,9 @@ dependencies = [
     "python-dateutil",
 ]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
 [project.scripts]
 bpc = "bpc.cli:main"
 

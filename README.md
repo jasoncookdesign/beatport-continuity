@@ -23,14 +23,17 @@ It is built for personal insight, not as a commercial product.
 
 * Fetches Beatport charts weekly (Top 100, genre Top 100s, and Hype 100s)
 * Normalizes snapshot dates to weekly buckets (most recent Monday)
-* Stores immutable snapshots in SQLite
+* Stores weekly snapshots in SQLite (see retention below)
 * **Resilient to partial failure**:
-  * If a chart fails to parse or returns empty results, the run continues
-  * Failures are logged and recorded per chart/week
+  * If a chart fails to fetch, fails to parse, or returns empty results, the run continues
+  * Every attempt leaves one `chart_snapshots` row per chart per week: `status='ok'` with its entries, or `status='failed'` with the error. Network and HTTP errors are recorded too.
+  * A failure never overwrites a week that already succeeded (for example a manual re-run)
   * Unrelated charts are never rolled back
 * Includes local diagnostics to validate parsing and catch breakage early
 
 This ensures continuity is preserved even when Beatport pages are inconsistent.
+
+Beatport only publishes a Hype 100 for genres in its Hype program. Bass / Club, Breaks / Breakbeat / UK Bass, 140 / Deep Dubstep / Grime, Jackin House, Techno (Raw / Deep / Hypnotic), Trap / Future Bass, and UK Garage / Bassline aren't in it (their genre data has `is_included_in_hype: false`), so they're tracked by Top 100 only. A Hype page for a genre outside the program fails with `HypeNotOffered`.
 
 ---
 
@@ -51,8 +54,18 @@ Computed **per chart**, never globally:
   * **Fader** — decaying relevance
   * **Spike** — short-lived hype appearances
 
-All metrics are persisted and inspectable—nothing is a black box.  
+Each chart's latest metrics are persisted and inspectable—nothing is a black box.  
 Buckets become more accurate over time as historical data accumulates.
+
+#### Unknown weeks
+
+Weeks are Monday buckets on the calendar. A week is **known** for a chart when it has a `status='ok'` snapshot. It is **unknown** when the fetch failed or when nothing was recorded at all (for example the weekly run never landed, as for the eight Mondays from 2026-07-13 to 2026-08-31, or most charts on 2026-05-11). Unknown weeks are never read as data:
+
+* **Not a drop-off.** A re-entry needs an observed absence, a known week without the track. Weeks on chart, age, and presence count known weeks only.
+* **Not consecutive.** A streak continues only into the next calendar week, so an unknown week ends it. Week-over-week movement compares with the previous calendar week only, and momentum and volatility use the current streak (at most its last four weeks).
+* **Not the latest week.** A chart's metrics are as of its last known week. If this week's fetch failed, its page keeps last week's numbers and says "As of week …".
+
+`status` lists each chart's unknown weeks.
 
 ---
 
@@ -85,6 +98,7 @@ In addition to per-chart analysis, the report includes an **Across All Charts** 
 * Surfaces tracks appearing in multiple charts
 * Highlights durability across contexts
 * Uses an explicitly documented aggregation method
+* Combines only charts at the newest week; a chart whose latest fetch failed keeps its own page but is left out here
 
 This page is deliberately conservative:
 * No hidden weighting
@@ -103,6 +117,17 @@ This page is deliberately conservative:
   * Status command surfaces missing or failed charts cleanly
 * No external services required
 * No runtime dependencies beyond Python + SQLite
+
+### Storage and retention
+
+`data/beatport.sqlite` is committed by the weekly run, so it must stay under GitHub's 100 MiB file limit (Git warns above 50 MiB). Each `compute` keeps it bounded:
+
+* `chart_entries` and `chart_snapshots` keep the last 52 weeks. Older weeks remain in every earlier commit of the database, so nothing is unrecoverable.
+* `tracks` that no retained entry or metric references are deleted.
+* `durability_metrics` is a derived cache holding one slice per chart: the latest computed week. Any other week can be recomputed from `chart_entries` with `compute --snapshot-date`.
+* `VACUUM` reclaims the freed pages.
+
+At 27 charts that levels off at roughly 35 MiB once 52 weeks are retained.
 
 ---
 
@@ -129,6 +154,13 @@ This page is deliberately conservative:
    pip install -e .
    ```
 
+3. To run the tests:
+
+   ```bash
+   pip install -e ".[test]"
+   python -m pytest
+   ```
+
 ---
 
 ## CLI usage
@@ -149,10 +181,10 @@ python -m bpc.cli --help
   If no date is provided, defaults to the most recent weekly bucket.
 
 * `compute [--snapshot-date YYYY-MM-DD]`
-  Compute durability metrics per chart up to the given week.
+  Compute durability metrics per chart up to the given week, as of each chart's last known week. Replaces that chart's previous metrics slice, then applies retention.
 
 * `report [--snapshot-date YYYY-MM-DD]`
-  Render static HTML pages to `docs/`.
+  Render static HTML pages to `docs/` for the charts in `TRACKED_CHARTS`, each as of its latest metrics on or before the given week.
 
 * `run-all [--snapshot-date YYYY-MM-DD]`
   Run `init-db → ingest → compute → report`.
@@ -163,6 +195,7 @@ python -m bpc.cli --help
   * tracked charts
   * latest successful snapshots
   * missing or failed chart/weeks
+  * unknown weeks per chart (failed, or no record)
   * metric coverage
   * report location
 

@@ -33,6 +33,15 @@ def load_paths() -> Paths:
 
 
 # Tracked Beatport charts (Top 100 + Hype where applicable)
+#
+# Beatport only offers a Hype 100 for genres in its Hype program. These genres
+# have no Hype chart: their genre metadata carries is_included_in_hype=false
+# and the hype-100 URL returns a page with count=0 (checked every week from
+# 2026-01-05 to 2026-10-05). They are tracked by Top 100 only:
+#   bass-club, breaks, deep-dubstep-grime, jackin-house, techno-rdh,
+#   trap-future-bass, uk-garage-bassline.
+# If Beatport adds one of them to Hype, re-add its hype-100 entry; a page for a
+# genre outside the program fails with fetch.HypeNotOffered.
 TRACKED_CHARTS: List[Dict[str, str]] = [
     # Overall
     {
@@ -58,13 +67,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "name": "Deep Dubstep / Grime Top 100",
         "url": "https://www.beatport.com/genre/140-deep-dubstep-grime/95/top-100",
     },
-    {
-        "id": "deep-dubstep-grime-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "deep-dubstep-grime",
-        "name": "Deep Dubstep / Grime Hype 100",
-        "url": "https://www.beatport.com/genre/140-deep-dubstep-grime/95/hype-100",
-    },
 
     # Bass Club
     {
@@ -74,13 +76,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "name": "Bass Club Top 100",
         "url": "https://www.beatport.com/genre/bass-club/85/top-100",
     },
-    {
-        "id": "bass-club-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "bass-club",
-        "name": "Bass Club Hype 100",
-        "url": "https://www.beatport.com/genre/bass-club/85/hype-100",
-    },
 
     # Breaks / Breakbeat / UK Bass
     {
@@ -89,13 +84,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "genre_slug": "breaks",
         "name": "Breaks / Breakbeat / UK Bass Top 100",
         "url": "https://www.beatport.com/genre/breaks-breakbeat-uk-bass/9/top-100",
-    },
-    {
-        "id": "breaks-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "breaks",
-        "name": "Breaks / Breakbeat / UK Bass Hype 100",
-        "url": "https://www.beatport.com/genre/breaks-breakbeat-uk-bass/9/hype-100",
     },
 
     # Deep House
@@ -137,13 +125,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "genre_slug": "jackin-house",
         "name": "Jackin House Top 100",
         "url": "https://www.beatport.com/genre/jackin-house/97/top-100",
-    },
-    {
-        "id": "jackin-house-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "jackin-house",
-        "name": "Jackin House Hype 100",
-        "url": "https://www.beatport.com/genre/jackin-house/97/hype-100",
     },
 
     # Mainstage
@@ -266,13 +247,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "name": "Techno (Raw / Deep / Hypnotic) Top 100",
         "url": "https://www.beatport.com/genre/techno-raw-deep-hypnotic/92/top-100",
     },
-    {
-        "id": "techno-rdh-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "techno-rdh",
-        "name": "Techno (Raw / Deep / Hypnotic) Hype 100",
-        "url": "https://www.beatport.com/genre/techno-raw-deep-hypnotic/92/hype-100",
-    },
 
     # Trap / Future Bass
     {
@@ -282,13 +256,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "name": "Trap / Future Bass Top 100",
         "url": "https://www.beatport.com/genre/trap-future-bass/38/top-100",
     },
-    {
-        "id": "trap-future-bass-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "trap-future-bass",
-        "name": "Trap / Future Bass Hype 100",
-        "url": "https://www.beatport.com/genre/trap-future-bass/38/hype-100",
-    },
 
     # UK Garage / Bassline
     {
@@ -297,13 +264,6 @@ TRACKED_CHARTS: List[Dict[str, str]] = [
         "genre_slug": "uk-garage-bassline",
         "name": "UK Garage / Bassline Top 100",
         "url": "https://www.beatport.com/genre/uk-garage-bassline/86/top-100",
-    },
-    {
-        "id": "uk-garage-bassline-hype-100",
-        "chart_type": "hype",
-        "genre_slug": "uk-garage-bassline",
-        "name": "UK Garage / Bassline Hype 100",
-        "url": "https://www.beatport.com/genre/uk-garage-bassline/86/hype-100",
     },
 ]
 

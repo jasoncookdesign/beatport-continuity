@@ -1,12 +1,13 @@
 """HTML report rendering for Beatport Continuity."""
 from __future__ import annotations
 
-from datetime import date, datetime
-from typing import Dict, List, Optional
+from datetime import date, datetime, timezone
+from typing import Dict, List, Optional, Sequence
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .config import load_paths
+from .compute import known_weeks
+from .config import TRACKED_CHARTS, load_paths
 from .logging_utils import get_logger
 
 LOG = get_logger(__name__)
@@ -88,49 +89,42 @@ def bucket_row(row: Dict[str, object]) -> str:
     return "—"
 
 
-def _resolve_target_weeks(conn, snapshot_date: Optional[date]):
-    target_iso = snapshot_date.isoformat() if snapshot_date else None
+def _resolve_target_weeks(conn, snapshot_date: Optional[date], chart_ids: Sequence[str]):
+    """Pick each tracked chart's metrics slice: the latest as_of_week on or
+    before the target week. A chart whose latest fetch failed keeps its last
+    known week (shown on its page as "As of week ...") rather than dropping
+    out. Charts no longer in chart_ids (retired from config) are left out."""
+    target_iso = snapshot_date.isoformat() if snapshot_date else "9999-12-31"
+    tracked = set(chart_ids)
 
     rows = conn.execute(
         """
-        SELECT c.id, c.name, MAX(dm.as_of_week) as latest_week
+        SELECT c.id, c.name, MAX(dm.as_of_week) as as_of_week
         FROM charts c
         JOIN durability_metrics dm ON dm.chart_id = c.id
+        WHERE dm.as_of_week <= ?
         GROUP BY c.id, c.name
         ORDER BY c.name
-        """
+        """,
+        (target_iso,),
     ).fetchall()
 
     chart_weeks = []
-    for chart_id, chart_name, latest_week in rows:
-        if target_iso:
-            as_of_week = target_iso
-            exists = conn.execute(
-                "SELECT 1 FROM durability_metrics WHERE chart_id = ? AND as_of_week = ? LIMIT 1",
-                (chart_id, as_of_week),
-            ).fetchone()
-            if not exists:
-                LOG.warning(
-                    "No durability metrics for chart %s at %s; skipping", chart_id, as_of_week
-                )
-                continue
-        else:
-            as_of_week = latest_week
+    for chart_id, chart_name, as_of_week in rows:
+        if chart_id not in tracked:
+            continue
+        if snapshot_date and as_of_week != target_iso:
+            LOG.warning(
+                "No metrics for chart %s at %s; using last known week %s", chart_id, target_iso, as_of_week
+            )
         chart_weeks.append((chart_id, chart_name, as_of_week))
 
     return chart_weeks
 
 
 def _fetch_weeks_observed(conn, chart_id: str, as_of_week: str) -> int:
-    row = conn.execute(
-        """
-        SELECT COUNT(DISTINCT snapshot_date)
-        FROM chart_snapshots
-        WHERE chart_id = ? AND snapshot_date <= ?
-        """,
-        (chart_id, as_of_week),
-    ).fetchone()
-    return int(row[0]) if row and row[0] is not None else 0
+    """Number of known (status='ok') weeks up to as_of_week."""
+    return len(known_weeks(conn, chart_id, as_of_week))
 
 
 def _fetch_rows_for_chart(conn, chart_id: str, as_of_week: str) -> List[Dict[str, object]]:
@@ -365,7 +359,7 @@ def run_report(conn, snapshot_date: Optional[date] = None) -> str:
     charts_dir = paths.docs / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
 
-    chart_weeks = _resolve_target_weeks(conn, snapshot_date)
+    chart_weeks = _resolve_target_weeks(conn, snapshot_date, [c["id"] for c in TRACKED_CHARTS])
     if not chart_weeks:
         LOG.warning("No durability metrics available; skipping report")
         return str(paths.docs / "index.html")
@@ -385,7 +379,7 @@ def run_report(conn, snapshot_date: Optional[date] = None) -> str:
             }
         )
 
-    generated_at = datetime.utcnow().isoformat(timespec="seconds")
+    generated_at = datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
     env = Environment(
         loader=FileSystemLoader(str(paths.templates)),
         autoescape=select_autoescape(["html", "xml"]),
@@ -410,7 +404,15 @@ def run_report(conn, snapshot_date: Optional[date] = None) -> str:
         chart_path.write_text(rendered_chart, encoding="utf-8")
         LOG.info("Chart page written to %s", chart_path)
 
-    chart_targets = [(chart["chart_id"], chart["chart_name"], chart["as_of_week"]) for chart in charts]
+    # The cross-chart page compares charts within one week, so it uses only
+    # charts at the newest as-of week. A chart whose latest fetch failed keeps
+    # its own page but is left out here.
+    newest_week = max((chart["as_of_week"] for chart in charts), default=None)
+    chart_targets = [
+        (chart["chart_id"], chart["chart_name"], chart["as_of_week"])
+        for chart in charts
+        if chart["as_of_week"] == newest_week
+    ]
 
     aggregate_rows = _fetch_cross_chart_rows(conn, chart_targets)
     aggregate_tracks = _aggregate_across_charts(aggregate_rows)
